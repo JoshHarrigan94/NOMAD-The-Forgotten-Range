@@ -331,8 +331,17 @@ const CONFIG = {
     acceleration: 11,
     friction: 8,
     radius: 12,
-    staminaDrain: 22,
-    staminaRecover: 14
+staminaDrain: 22,
+staminaRecover: 16,
+
+walkAcceleration: 9,
+sprintAcceleration: 13,
+turnResponsiveness: 10,
+coastFriction: 3.2,
+brakeFriction: 8.5,
+maxVelocity: 320,
+cameraLead: 42,
+cameraDrift: 3.8
   },
 
   time: {
@@ -370,12 +379,18 @@ const state = {
     stamina: 100,
     energy: 100,
     focus: 72,
-    facing: 0
+    facing: 0,
+lastTerrain: "grass",
+slopeX: 0,
+slopeY: 0,
+flow: 0
   },
 
   camera: {
     x: 0,
-    y: 0
+y: 0,
+leadX: 0,
+leadY: 0
   },
 
   input: {
@@ -632,6 +647,62 @@ function getTerrainAt(x, y) {
   return "snow";
 }
 
+function getTerrainProfile(type) {
+  const profiles = {
+    water: {
+      speed: 0.42,
+      acceleration: 0.55,
+      friction: 2.6,
+      flowGain: 0.4,
+      label: "Cold water"
+    },
+    sand: {
+      speed: 0.76,
+      acceleration: 0.72,
+      friction: 6.2,
+      flowGain: 0.6,
+      label: "Soft sand"
+    },
+    grass: {
+      speed: 1,
+      acceleration: 1,
+      friction: 3.2,
+      flowGain: 1,
+      label: "Open ground"
+    },
+    rock: {
+      speed: 0.9,
+      acceleration: 0.86,
+      friction: 2.4,
+      flowGain: 1.25,
+      label: "Stone ridges"
+    },
+    snow: {
+      speed: 0.72,
+      acceleration: 0.62,
+      friction: 1.45,
+      flowGain: 1.45,
+      label: "Powder snow"
+    }
+  };
+
+  return profiles[type] || profiles.grass;
+}
+
+function getSlopeVector(x, y) {
+  const sample = 90;
+
+  const left = fractalNoise((x - sample) * 0.0012, y * 0.0012);
+  const right = fractalNoise((x + sample) * 0.0012, y * 0.0012);
+  const up = fractalNoise(x * 0.0012, (y - sample) * 0.0012);
+  const down = fractalNoise(x * 0.0012, (y + sample) * 0.0012);
+
+  return {
+    x: (left - right) * 2,
+    y: (up - down) * 2
+  };
+}
+
 function terrainColour(type, light) {
   const palettes = {
     water: ["#577b9b", "#3f647f"],
@@ -717,9 +788,10 @@ function updatePlayer(dt) {
     const dy = state.pointer.y - state.pointer.startY;
     const mag = Math.hypot(dx, dy);
 
-    if (mag > 12) {
-      ix += dx / Math.max(80, mag);
-      iy += dy / Math.max(80, mag);
+    if (mag > 10) {
+      const strength = clamp(mag / 90, 0, 1);
+      ix += (dx / mag) * strength;
+      iy += (dy / mag) * strength;
     }
   }
 
@@ -730,27 +802,50 @@ function updatePlayer(dt) {
     iy /= inputMag;
   }
 
-  const sprinting = state.input.sprint && state.player.stamina > 2 && inputMag > 0;
-  const speed = sprinting ? CONFIG.player.sprintSpeed : CONFIG.player.baseSpeed;
-
   const terrain = getTerrainAt(state.player.x, state.player.y);
-  const terrainSpeed = {
-    water: 0.45,
-    sand: 0.78,
-    grass: 1,
-    rock: 0.88,
-    snow: 0.68
-  }[terrain] || 1;
+  const profile = getTerrainProfile(terrain);
+  const slope = getSlopeVector(state.player.x, state.player.y);
 
-  const ax = ix * speed * terrainSpeed;
-  const ay = iy * speed * terrainSpeed;
+  state.player.lastTerrain = terrain;
+  state.player.slopeX = lerp(state.player.slopeX, slope.x, 2.2 * dt);
+  state.player.slopeY = lerp(state.player.slopeY, slope.y, 2.2 * dt);
 
-  state.player.vx = lerp(state.player.vx, ax, CONFIG.player.acceleration * dt);
-  state.player.vy = lerp(state.player.vy, ay, CONFIG.player.acceleration * dt);
+  const sprinting = state.input.sprint && state.player.stamina > 2 && inputMag > 0;
+  const targetSpeed = sprinting ? CONFIG.player.sprintSpeed : CONFIG.player.baseSpeed;
+  const accel = sprinting ? CONFIG.player.sprintAcceleration : CONFIG.player.walkAcceleration;
 
-  if (inputMag === 0) {
-    state.player.vx = lerp(state.player.vx, 0, CONFIG.player.friction * dt);
-    state.player.vy = lerp(state.player.vy, 0, CONFIG.player.friction * dt);
+  const desiredVx = ix * targetSpeed * profile.speed;
+  const desiredVy = iy * targetSpeed * profile.speed;
+
+  const slopeAssist = 38 * profile.flowGain;
+  const slopeVx = state.player.slopeX * slopeAssist;
+  const slopeVy = state.player.slopeY * slopeAssist;
+
+  if (inputMag > 0) {
+    state.player.vx = lerp(
+      state.player.vx,
+      desiredVx + slopeVx,
+      accel * profile.acceleration * dt
+    );
+
+    state.player.vy = lerp(
+      state.player.vy,
+      desiredVy + slopeVy,
+      accel * profile.acceleration * dt
+    );
+  } else {
+    const friction = profile.friction || CONFIG.player.coastFriction;
+
+    state.player.vx = lerp(state.player.vx, slopeVx, friction * dt);
+    state.player.vy = lerp(state.player.vy, slopeVy, friction * dt);
+  }
+
+  const velocity = Math.hypot(state.player.vx, state.player.vy);
+
+  if (velocity > CONFIG.player.maxVelocity) {
+    const scale = CONFIG.player.maxVelocity / velocity;
+    state.player.vx *= scale;
+    state.player.vy *= scale;
   }
 
   const oldX = state.player.x;
@@ -762,7 +857,9 @@ function updatePlayer(dt) {
   const moved = dist(oldX, oldY, state.player.x, state.player.y);
   state.distanceTravelled += moved;
 
-  if (Math.hypot(state.player.vx, state.player.vy) > 2) {
+  const currentVelocity = Math.hypot(state.player.vx, state.player.vy);
+
+  if (currentVelocity > 4) {
     state.player.facing = Math.atan2(state.player.vy, state.player.vx);
   }
 
@@ -773,11 +870,23 @@ function updatePlayer(dt) {
   }
 
   state.player.stamina = clamp(state.player.stamina, 0, 100);
+
+  const flowTarget = clamp(currentVelocity / CONFIG.player.sprintSpeed, 0, 1);
+  state.player.flow = lerp(state.player.flow, flowTarget, 3.5 * dt);
 }
 
 function updateCamera(dt) {
-  state.camera.x = lerp(state.camera.x, state.player.x, 4.5 * dt);
-  state.camera.y = lerp(state.camera.y, state.player.y, 4.5 * dt);
+  const velocity = Math.hypot(state.player.vx, state.player.vy);
+  const leadStrength = clamp(velocity / CONFIG.player.sprintSpeed, 0, 1);
+
+  const targetLeadX = Math.cos(state.player.facing) * CONFIG.player.cameraLead * leadStrength;
+  const targetLeadY = Math.sin(state.player.facing) * CONFIG.player.cameraLead * leadStrength;
+
+  state.camera.leadX = lerp(state.camera.leadX, targetLeadX, CONFIG.player.cameraDrift * dt);
+  state.camera.leadY = lerp(state.camera.leadY, targetLeadY, CONFIG.player.cameraDrift * dt);
+
+  state.camera.x = lerp(state.camera.x, state.player.x + state.camera.leadX, 4.2 * dt);
+  state.camera.y = lerp(state.camera.y, state.player.y + state.camera.leadY, 4.2 * dt);
 }
 
 /* =========================================================
@@ -1070,6 +1179,29 @@ function drawPlayer() {
   ctx.restore();
 }
 
+function drawMovementTrail() {
+  const velocity = Math.hypot(state.player.vx, state.player.vy);
+  if (velocity < 80) return;
+
+  const p = worldToScreen(state.player.x, state.player.y);
+  const alpha = clamp((velocity - 80) / 180, 0, 0.28);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = "#e0f2fe";
+  ctx.lineWidth = 2;
+
+  const backX = Math.cos(state.player.facing + Math.PI) * 34;
+  const backY = Math.sin(state.player.facing + Math.PI) * 34;
+
+  ctx.beginPath();
+  ctx.moveTo(p.x + backX, p.y + backY);
+  ctx.lineTo(p.x + backX * 2.3, p.y + backY * 2.3);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawAtmosphere() {
   const light = getLightLevel();
 
@@ -1108,6 +1240,13 @@ function updateHUD() {
   regionName.textContent = getRegionName();
 }
 
+function updateMovementHUD() {
+  const terrain = getTerrainProfile(state.player.lastTerrain);
+  const speed = Math.round(Math.hypot(state.player.vx, state.player.vy));
+
+  distanceText.textContent = `${(state.distanceTravelled / 1000).toFixed(1)} KM WALKED · ${speed} M/S · ${terrain.label}`;
+}
+
 /* =========================================================
    14. MAIN LOOP
 ========================================================= */
@@ -1120,6 +1259,7 @@ function update(dt) {
   updateCamera(dt);
   updateDiscovery();
   updateHUD();
+updateMovementHUD();
 }
 
 function render() {
@@ -1128,8 +1268,9 @@ function render() {
   drawDistantMountains();
   drawTerrain();
   drawLandmarks();
-  drawPlayer();
-  drawAtmosphere();
+drawMovementTrail();
+drawPlayer();
+drawAtmosphere();
 }
 
 function loop(now) {
