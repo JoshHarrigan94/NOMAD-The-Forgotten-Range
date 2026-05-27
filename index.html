@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>NOMAD: The Forgotten Range</title>
+
+<style>
+  :root {
+    --bg: #111827;
+    --panel: rgba(12, 18, 30, 0.58);
+    --text: rgba(255,255,255,0.92);
+    --muted: rgba(255,255,255,0.62);
+    --line: rgba(255,255,255,0.18);
+    --accent: #7dd3fc;
+    --warm: #fb7185;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;
+    background: #111827;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .top-left {
+    position: absolute;
+    top: 26px;
+    left: 28px;
+    max-width: 320px;
+  }
+
+  .region {
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 14px;
+  }
+
+  .objective {
+    padding-left: 14px;
+    border-left: 2px solid var(--warm);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .top-right {
+    position: absolute;
+    top: 26px;
+    right: 28px;
+    text-align: right;
+    color: var(--text);
+    font-size: 14px;
+    letter-spacing: 0.12em;
+  }
+
+  .bottom-left {
+    position: absolute;
+    left: 28px;
+    bottom: 28px;
+    width: 220px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    color: white;
+    font-size: 15px;
+  }
+
+  .bar {
+    height: 8px;
+    background: rgba(255,255,255,0.16);
+    overflow: hidden;
+  }
+
+  .bar > span {
+    display: block;
+    height: 100%;
+    width: 70%;
+    background: white;
+  }
+
+  .bar.energy > span { background: #67e8f9; }
+  .bar.stamina > span { background: #f472b6; }
+  .bar.focus > span { background: #c4b5fd; }
+
+  .bottom-centre {
+    position: absolute;
+    bottom: 34px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .bottom-centre::before,
+  .bottom-centre::after {
+    content: "";
+    display: inline-block;
+    width: 80px;
+    height: 1px;
+    background: var(--line);
+    vertical-align: middle;
+    margin: 0 14px;
+  }
+
+  .mini-help {
+    position: absolute;
+    right: 28px;
+    bottom: 28px;
+    padding: 12px 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+    backdrop-filter: blur(10px);
+  }
+
+  .title-card {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at 70% 40%, rgba(251, 113, 133, 0.22), transparent 35%),
+      radial-gradient(circle at 25% 30%, rgba(125, 211, 252, 0.20), transparent 30%),
+      rgba(6, 10, 18, 0.88);
+    transition: opacity 400ms ease;
+  }
+
+  .title-inner {
+    text-align: center;
+    padding: 30px;
+  }
+
+  .mark {
+    font-size: 12px;
+    letter-spacing: 0.4em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(52px, 11vw, 130px);
+    letter-spacing: 0.28em;
+    font-weight: 500;
+  }
+
+  .subtitle {
+    margin-top: 14px;
+    letter-spacing: 0.24em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 13px;
+  }
+
+  .start {
+    margin-top: 34px;
+    display: inline-block;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.06);
+    padding: 14px 22px;
+    border-radius: 999px;
+    letter-spacing: 0.16em;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (max-width: 700px) {
+    .top-left { top: 18px; left: 18px; }
+    .top-right { top: 18px; right: 18px; font-size: 12px; }
+    .bottom-left { left: 18px; bottom: 20px; width: 170px; }
+    .bottom-centre { display: none; }
+    .mini-help { display: none; }
+  }
+</style>
+</head>
+
+<body>
+<canvas id="game"></canvas>
+
+<div class="hud">
+  <div class="top-left">
+    <div class="region" id="regionName">The Forgotten Range</div>
+    <div class="objective" id="objectiveText">
+      Find a way to the observatory<br />
+      Follow the old lights
+    </div>
+  </div>
+
+  <div class="top-right">
+    <div id="clockText">06:00</div>
+    <div id="dayText" style="color:rgba(255,255,255,0.6); margin-top:6px;">DAY 1</div>
+  </div>
+
+  <div class="bottom-left">
+    <div class="bar-row">⚡ <div class="bar energy"><span id="energyBar"></span></div></div>
+    <div class="bar-row">⛰ <div class="bar stamina"><span id="staminaBar"></span></div></div>
+    <div class="bar-row">◇ <div class="bar focus"><span id="focusBar"></span></div></div>
+  </div>
+
+  <div class="bottom-centre" id="distanceText">0.0 KM WALKED</div>
+
+  <div class="mini-help">
+    WASD / Arrows: Move<br />
+    Shift: Sprint<br />
+    E: Discover beacon<br />
+    R: Reset save
+  </div>
+</div>
+
+<div class="title-card" id="titleCard">
+  <div class="title-inner">
+    <div class="mark">THE FORGOTTEN RANGE</div>
+    <h1>NOMAD</h1>
+    <div class="subtitle">Journey. Move. Discover.</div>
+    <div class="start">Tap / Click / Press Any Key</div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   NOMAD: THE FORGOTTEN RANGE
+   Part 1 — Single-file playable foundation
+
+   Current systems:
+   - canvas renderer
+   - procedural low-poly world
+   - camera follow
+   - player movement
+   - sprint/stamina
+   - day/night colour cycle
+   - discovery beacons
+   - minimal HUD
+   - localStorage persistence
+========================================================= */
+
+/* =========================================================
+   01. CANVAS SETUP
+========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+let view = {
+  w: 0,
+  h: 0,
+  cx: 0,
+  cy: 0
+};
+
+function resizeCanvas() {
+  view.w = window.innerWidth;
+  view.h = window.innerHeight;
+  view.cx = view.w / 2;
+  view.cy = view.h / 2;
+
+  canvas.width = Math.floor(view.w * DPR);
+  canvas.height = Math.floor(view.h * DPR);
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+/* =========================================================
+   02. CONFIG
+========================================================= */
+
+const CONFIG = {
+  saveKey: "nomad_forgotten_range_save_v1",
+
+  world: {
+    seed: 92417,
+    chunkSize: 420,
+    renderRadius: 4,
+    horizonParallax: 0.18
+  },
+
+  player: {
+    baseSpeed: 145,
+    sprintSpeed: 235,
+    acceleration: 11,
+    friction: 8,
+    radius: 12,
+    staminaDrain: 22,
+    staminaRecover: 14
+  },
+
+  time: {
+    dayLengthSeconds: 520,
+    startHour: 6
+  },
+
+  discovery: {
+    interactionRadius: 70
+  }
+};
+
+/* =========================================================
+   03. STATE
+========================================================= */
+
+const state = {
+  started: false,
+  paused: false,
+  lastTime: performance.now(),
+
+  distanceTravelled: 0,
+  discovered: new Set(),
+
+  time: {
+    elapsed: 0,
+    day: 1
+  },
+
+  player: {
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    stamina: 100,
+    energy: 100,
+    focus: 72,
+    facing: 0
+  },
+
+  camera: {
+    x: 0,
+    y: 0
+  },
+
+  input: {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    sprint: false,
+    interact: false
+  },
+
+  pointer: {
+    active: false,
+    startX: 0,
+    startY: 0,
+    x: 0,
+    y: 0
+  }
+};
+
+/* =========================================================
+   04. DOM REFERENCES
+========================================================= */
+
+const titleCard = document.getElementById("titleCard");
+const clockText = document.getElementById("clockText");
+const dayText = document.getElementById("dayText");
+const energyBar = document.getElementById("energyBar");
+const staminaBar = document.getElementById("staminaBar");
+const focusBar = document.getElementById("focusBar");
+const distanceText = document.getElementById("distanceText");
+const objectiveText = document.getElementById("objectiveText");
+const regionName = document.getElementById("regionName");
+
+/* =========================================================
+   05. UTILS
+========================================================= */
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function smoothstep(edge0, edge1, x) {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+function dist(a, b, c, d) {
+  return Math.hypot(c - a, d - b);
+}
+
+function hash(n) {
+  n = Math.sin(n) * 43758.5453123;
+  return n - Math.floor(n);
+}
+
+function hash2(x, y, seed = CONFIG.world.seed) {
+  return hash(x * 127.1 + y * 311.7 + seed * 0.017);
+}
+
+function noise2(x, y) {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+
+  const a = hash2(ix, iy);
+  const b = hash2(ix + 1, iy);
+  const c = hash2(ix, iy + 1);
+  const d = hash2(ix + 1, iy + 1);
+
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+
+  return lerp(lerp(a, b, ux), lerp(c, d, ux), uy);
+}
+
+function fractalNoise(x, y) {
+  let total = 0;
+  let amp = 1;
+  let freq = 1;
+  let norm = 0;
+
+  for (let i = 0; i < 5; i++) {
+    total += noise2(x * freq, y * freq) * amp;
+    norm += amp;
+    amp *= 0.5;
+    freq *= 2;
+  }
+
+  return total / norm;
+}
+
+function worldToScreen(x, y) {
+  return {
+    x: x - state.camera.x + view.cx,
+    y: y - state.camera.y + view.cy
+  };
+}
+
+function screenToWorld(x, y) {
+  return {
+    x: x + state.camera.x - view.cx,
+    y: y + state.camera.y - view.cy
+  };
+}
+
+/* =========================================================
+   06. SAVE / LOAD
+========================================================= */
+
+function saveGame() {
+  const payload = {
+    player: {
+      x: state.player.x,
+      y: state.player.y,
+      stamina: state.player.stamina,
+      energy: state.player.energy,
+      focus: state.player.focus
+    },
+    time: state.time,
+    distanceTravelled: state.distanceTravelled,
+    discovered: Array.from(state.discovered)
+  };
+
+  localStorage.setItem(CONFIG.saveKey, JSON.stringify(payload));
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(CONFIG.saveKey);
+    if (!raw) return;
+
+    const data = JSON.parse(raw);
+
+    if (data.player) {
+      state.player.x = Number(data.player.x || 0);
+      state.player.y = Number(data.player.y || 0);
+      state.player.stamina = Number(data.player.stamina || 100);
+      state.player.energy = Number(data.player.energy || 100);
+      state.player.focus = Number(data.player.focus || 72);
+    }
+
+    if (data.time) {
+      state.time.elapsed = Number(data.time.elapsed || 0);
+      state.time.day = Number(data.time.day || 1);
+    }
+
+    if (typeof data.distanceTravelled === "number") {
+      state.distanceTravelled = data.distanceTravelled;
+    }
+
+    if (Array.isArray(data.discovered)) {
+      state.discovered = new Set(data.discovered);
+    }
+  } catch (err) {
+    console.warn("Save failed to load", err);
+  }
+}
+
+function resetSave() {
+  localStorage.removeItem(CONFIG.saveKey);
+  location.reload();
+}
+
+loadGame();
+
+/* =========================================================
+   07. INPUT
+========================================================= */
+
+const keyMap = {
+  ArrowUp: "up",
+  KeyW: "up",
+  ArrowDown: "down",
+  KeyS: "down",
+  ArrowLeft: "left",
+  KeyA: "left",
+  ArrowRight: "right",
+  KeyD: "right",
+  ShiftLeft: "sprint",
+  ShiftRight: "sprint"
+};
+
+window.addEventListener("keydown", (e) => {
+  startGame();
+
+  if (keyMap[e.code]) {
+    state.input[keyMap[e.code]] = true;
+  }
+
+  if (e.code === "KeyE") {
+    state.input.interact = true;
+  }
+
+  if (e.code === "KeyR") {
+    resetSave();
+  }
+});
+
+window.addEventListener("keyup", (e) => {
+  if (keyMap[e.code]) {
+    state.input[keyMap[e.code]] = false;
+  }
+
+  if (e.code === "KeyE") {
+    state.input.interact = false;
+  }
+});
+
+canvas.addEventListener("pointerdown", (e) => {
+  startGame();
+  state.pointer.active = true;
+  state.pointer.startX = e.clientX;
+  state.pointer.startY = e.clientY;
+  state.pointer.x = e.clientX;
+  state.pointer.y = e.clientY;
+});
+
+canvas.addEventListener("pointermove", (e) => {
+  state.pointer.x = e.clientX;
+  state.pointer.y = e.clientY;
+});
+
+window.addEventListener("pointerup", () => {
+  state.pointer.active = false;
+});
+
+titleCard.addEventListener("click", startGame);
+
+function startGame() {
+  if (state.started) return;
+  state.started = true;
+  titleCard.classList.add("hidden");
+}
+
+/* =========================================================
+   08. WORLD GENERATION
+========================================================= */
+
+function getTerrainAt(x, y) {
+  const n1 = fractalNoise(x * 0.0012, y * 0.0012);
+  const n2 = fractalNoise(x * 0.0035 + 90, y * 0.0035 - 40);
+  const height = n1 * 0.75 + n2 * 0.25;
+
+  if (height < 0.28) return "water";
+  if (height < 0.38) return "sand";
+  if (height < 0.58) return "grass";
+  if (height < 0.74) return "rock";
+  return "snow";
+}
+
+function terrainColour(type, light) {
+  const palettes = {
+    water: ["#577b9b", "#3f647f"],
+    sand: ["#c8a77d", "#a98966"],
+    grass: ["#5f7f69", "#425f52"],
+    rock: ["#5c6073", "#3f4354"],
+    snow: ["#d6d8df", "#9fa8ba"]
+  };
+
+  const pair = palettes[type] || palettes.grass;
+  return light > 0.5 ? pair[0] : pair[1];
+}
+
+function getChunkKey(cx, cy) {
+  return `${cx},${cy}`;
+}
+
+function getVisibleChunks() {
+  const size = CONFIG.world.chunkSize;
+  const camChunkX = Math.floor(state.camera.x / size);
+  const camChunkY = Math.floor(state.camera.y / size);
+  const chunks = [];
+
+  for (let y = camChunkY - CONFIG.world.renderRadius; y <= camChunkY + CONFIG.world.renderRadius; y++) {
+    for (let x = camChunkX - CONFIG.world.renderRadius; x <= camChunkX + CONFIG.world.renderRadius; x++) {
+      chunks.push({ x, y, key: getChunkKey(x, y) });
+    }
+  }
+
+  return chunks;
+}
+
+function getLandmarksInChunk(cx, cy) {
+  const items = [];
+  const r = hash2(cx, cy);
+
+  if (r > 0.72) {
+    const size = CONFIG.world.chunkSize;
+    const lx = cx * size + hash2(cx + 13, cy - 7) * size;
+    const ly = cy * size + hash2(cx - 4, cy + 19) * size;
+
+    const types = ["beacon", "ruin", "camp", "stone", "tower"];
+    const type = types[Math.floor(hash2(cx + 1, cy + 1) * types.length)];
+
+    items.push({
+      id: `${type}:${cx}:${cy}`,
+      type,
+      x: lx,
+      y: ly,
+      discovered: state.discovered.has(`${type}:${cx}:${cy}`)
+    });
+  }
+
+  return items;
+}
+
+function getRegionName() {
+  const x = state.player.x;
+  const y = state.player.y;
+
+  if (y < -3000) return "The Pale North";
+  if (x > 2600) return "Amber Flats";
+  if (x < -2600) return "The Broken West";
+  if (y > 2800) return "South Glasslands";
+  return "The Forgotten Range";
+}
+
+/* =========================================================
+   09. PLAYER UPDATE
+========================================================= */
+
+function updatePlayer(dt) {
+  let ix = 0;
+  let iy = 0;
+
+  if (state.input.up) iy -= 1;
+  if (state.input.down) iy += 1;
+  if (state.input.left) ix -= 1;
+  if (state.input.right) ix += 1;
+
+  if (state.pointer.active) {
+    const dx = state.pointer.x - state.pointer.startX;
+    const dy = state.pointer.y - state.pointer.startY;
+    const mag = Math.hypot(dx, dy);
+
+    if (mag > 12) {
+      ix += dx / Math.max(80, mag);
+      iy += dy / Math.max(80, mag);
+    }
+  }
+
+  const inputMag = Math.hypot(ix, iy);
+
+  if (inputMag > 0) {
+    ix /= inputMag;
+    iy /= inputMag;
+  }
+
+  const sprinting = state.input.sprint && state.player.stamina > 2 && inputMag > 0;
+  const speed = sprinting ? CONFIG.player.sprintSpeed : CONFIG.player.baseSpeed;
+
+  const terrain = getTerrainAt(state.player.x, state.player.y);
+  const terrainSpeed = {
+    water: 0.45,
+    sand: 0.78,
+    grass: 1,
+    rock: 0.88,
+    snow: 0.68
+  }[terrain] || 1;
+
+  const ax = ix * speed * terrainSpeed;
+  const ay = iy * speed * terrainSpeed;
+
+  state.player.vx = lerp(state.player.vx, ax, CONFIG.player.acceleration * dt);
+  state.player.vy = lerp(state.player.vy, ay, CONFIG.player.acceleration * dt);
+
+  if (inputMag === 0) {
+    state.player.vx = lerp(state.player.vx, 0, CONFIG.player.friction * dt);
+    state.player.vy = lerp(state.player.vy, 0, CONFIG.player.friction * dt);
+  }
+
+  const oldX = state.player.x;
+  const oldY = state.player.y;
+
+  state.player.x += state.player.vx * dt;
+  state.player.y += state.player.vy * dt;
+
+  const moved = dist(oldX, oldY, state.player.x, state.player.y);
+  state.distanceTravelled += moved;
+
+  if (Math.hypot(state.player.vx, state.player.vy) > 2) {
+    state.player.facing = Math.atan2(state.player.vy, state.player.vx);
+  }
+
+  if (sprinting) {
+    state.player.stamina -= CONFIG.player.staminaDrain * dt;
+  } else {
+    state.player.stamina += CONFIG.player.staminaRecover * dt;
+  }
+
+  state.player.stamina = clamp(state.player.stamina, 0, 100);
+}
+
+function updateCamera(dt) {
+  state.camera.x = lerp(state.camera.x, state.player.x, 4.5 * dt);
+  state.camera.y = lerp(state.camera.y, state.player.y, 4.5 * dt);
+}
+
+/* =========================================================
+   10. DISCOVERY
+========================================================= */
+
+function getNearbyLandmark() {
+  const chunks = getVisibleChunks();
+
+  for (const chunk of chunks) {
+    const landmarks = getLandmarksInChunk(chunk.x, chunk.y);
+
+    for (const lm of landmarks) {
+      if (state.discovered.has(lm.id)) continue;
+
+      const d = dist(state.player.x, state.player.y, lm.x, lm.y);
+      if (d <= CONFIG.discovery.interactionRadius) {
+        return lm;
+      }
+    }
+  }
+
+  return null;
+}
+
+function updateDiscovery() {
+  const nearby = getNearbyLandmark();
+
+  if (nearby) {
+    objectiveText.innerHTML = `Press E to mark ${nearby.type}<br />${Math.round(dist(state.player.x, state.player.y, nearby.x, nearby.y))}m away`;
+
+    if (state.input.interact) {
+      state.discovered.add(nearby.id);
+      state.player.focus = clamp(state.player.focus + 8, 0, 100);
+      saveGame();
+    }
+  } else {
+    objectiveText.innerHTML = `Find a way to the observatory<br />Follow the old lights`;
+  }
+}
+
+/* =========================================================
+   11. TIME
+========================================================= */
+
+function updateTime(dt) {
+  state.time.elapsed += dt;
+
+  if (state.time.elapsed >= CONFIG.time.dayLengthSeconds) {
+    state.time.elapsed -= CONFIG.time.dayLengthSeconds;
+    state.time.day += 1;
+    saveGame();
+  }
+}
+
+function getDayProgress() {
+  return state.time.elapsed / CONFIG.time.dayLengthSeconds;
+}
+
+function getHour() {
+  const progress = getDayProgress();
+  return (CONFIG.time.startHour + progress * 24) % 24;
+}
+
+function getLightLevel() {
+  const hour = getHour();
+  const daylight = Math.sin(((hour - 6) / 24) * Math.PI * 2);
+  return clamp(daylight * 0.65 + 0.45, 0.08, 1);
+}
+
+function getSkyGradient() {
+  const hour = getHour();
+
+  if (hour < 5 || hour > 21) {
+    return ["#111827", "#312e81", "#0f172a"];
+  }
+
+  if (hour < 8) {
+    return ["#3b4b73", "#d89ca5", "#ffd6a5"];
+  }
+
+  if (hour < 17) {
+    return ["#7aa6c2", "#b8d8d8", "#f2d3a0"];
+  }
+
+  if (hour < 20) {
+    return ["#334766", "#b7798c", "#f5b56b"];
+  }
+
+  return ["#1e293b", "#5b4b7a", "#111827"];
+}
+
+/* =========================================================
+   12. RENDER WORLD
+========================================================= */
+
+function clearSky() {
+  const colours = getSkyGradient();
+
+  const grad = ctx.createLinearGradient(0, 0, view.w, view.h);
+  grad.addColorStop(0, colours[0]);
+  grad.addColorStop(0.58, colours[1]);
+  grad.addColorStop(1, colours[2]);
+
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, view.w, view.h);
+}
+
+function drawSunMoon() {
+  const hour = getHour();
+  const progress = hour / 24;
+  const angle = progress * Math.PI * 2 - Math.PI;
+
+  const x = view.cx + Math.cos(angle) * view.w * 0.42;
+  const y = view.cy + Math.sin(angle) * view.h * 0.38;
+
+  ctx.save();
+  ctx.globalAlpha = hour > 6 && hour < 20 ? 0.86 : 0.45;
+  ctx.fillStyle = hour > 6 && hour < 20 ? "#fff7cc" : "#dbeafe";
+  ctx.beginPath();
+  ctx.arc(x, y, hour > 6 && hour < 20 ? 32 : 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawDistantMountains() {
+  const light = getLightLevel();
+  const layers = [
+    { y: 0.36, amp: 80, scale: 0.0009, colour: `rgba(34, 43, 72, ${0.28 + light * 0.16})` },
+    { y: 0.46, amp: 120, scale: 0.0012, colour: `rgba(23, 31, 56, ${0.34 + light * 0.18})` },
+    { y: 0.58, amp: 160, scale: 0.0016, colour: `rgba(15, 23, 42, ${0.38 + light * 0.22})` }
+  ];
+
+  for (const layer of layers) {
+    ctx.beginPath();
+    ctx.moveTo(0, view.h);
+
+    const parallaxX = state.camera.x * CONFIG.world.horizonParallax;
+    const baseY = view.h * layer.y;
+
+    ctx.lineTo(0, baseY);
+
+    for (let x = 0; x <= view.w + 80; x += 80) {
+      const n = fractalNoise((x + parallaxX) * layer.scale, layer.y * 10);
+      const y = baseY - n * layer.amp;
+      ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(view.w, view.h);
+    ctx.closePath();
+
+    ctx.fillStyle = layer.colour;
+    ctx.fill();
+  }
+}
+
+function drawTerrain() {
+  const chunks = getVisibleChunks();
+  const size = CONFIG.world.chunkSize;
+  const light = getLightLevel();
+
+  for (const chunk of chunks) {
+    const wx = chunk.x * size;
+    const wy = chunk.y * size;
+    const s = worldToScreen(wx, wy);
+
+    const type = getTerrainAt(wx + size / 2, wy + size / 2);
+    const localLight = hash2(chunk.x, chunk.y) > 0.5 ? light : light * 0.72;
+
+    ctx.fillStyle = terrainColour(type, localLight);
+
+    ctx.beginPath();
+
+    const wobble = 46;
+    const p1 = { x: s.x + hash2(chunk.x, chunk.y) * wobble, y: s.y };
+    const p2 = { x: s.x + size, y: s.y + hash2(chunk.x + 1, chunk.y) * wobble };
+    const p3 = { x: s.x + size - hash2(chunk.x, chunk.y + 1) * wobble, y: s.y + size };
+    const p4 = { x: s.x, y: s.y + size - hash2(chunk.x - 1, chunk.y) * wobble };
+
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.lineTo(p4.x, p4.y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(255,255,255,${0.025 + light * 0.025})`;
+    ctx.stroke();
+  }
+}
+
+function drawLandmarks() {
+  const chunks = getVisibleChunks();
+
+  for (const chunk of chunks) {
+    const landmarks = getLandmarksInChunk(chunk.x, chunk.y);
+
+    for (const lm of landmarks) {
+      const s = worldToScreen(lm.x, lm.y);
+      const discovered = state.discovered.has(lm.id);
+
+      if (s.x < -100 || s.x > view.w + 100 || s.y < -100 || s.y > view.h + 100) continue;
+
+      ctx.save();
+
+      if (lm.type === "beacon" || lm.type === "tower") {
+        const pulse = Math.sin(performance.now() * 0.004 + lm.x) * 0.5 + 0.5;
+
+        ctx.globalAlpha = discovered ? 0.25 : 0.75;
+        ctx.strokeStyle = lm.type === "tower" ? "#fda4af" : "#67e8f9";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - 120 - pulse * 60);
+        ctx.lineTo(s.x, s.y - 18);
+        ctx.stroke();
+
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - 18, 5 + pulse * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = discovered ? 0.35 : 1;
+
+      if (lm.type === "ruin") {
+        ctx.fillStyle = "#d8b4fe";
+        ctx.fillRect(s.x - 18, s.y - 26, 8, 26);
+        ctx.fillRect(s.x + 8, s.y - 34, 8, 34);
+        ctx.fillRect(s.x - 22, s.y - 30, 44, 6);
+      }
+
+      if (lm.type === "camp") {
+        ctx.fillStyle = "#fb7185";
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - 28);
+        ctx.lineTo(s.x - 18, s.y + 10);
+        ctx.lineTo(s.x + 18, s.y + 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if (lm.type === "stone") {
+        ctx.fillStyle = "#cbd5e1";
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - 30);
+        ctx.lineTo(s.x - 16, s.y + 12);
+        ctx.lineTo(s.x + 18, s.y + 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+}
+
+function drawPlayer() {
+  const p = worldToScreen(state.player.x, state.player.y);
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(state.player.facing + Math.PI / 2);
+
+  ctx.fillStyle = "#111827";
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(-11, 14);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(11, 14);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#f97316";
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(0, 12);
+  ctx.lineTo(-8, 26);
+  ctx.lineTo(8, 26);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(p.x, p.y + 18, 18, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAtmosphere() {
+  const light = getLightLevel();
+
+  ctx.save();
+  ctx.globalAlpha = 1 - light;
+  ctx.fillStyle = "rgba(7, 10, 22, 0.48)";
+  ctx.fillRect(0, 0, view.w, view.h);
+  ctx.restore();
+
+  const fog = ctx.createRadialGradient(view.cx, view.cy, view.h * 0.1, view.cx, view.cy, view.h * 0.85);
+  fog.addColorStop(0, "rgba(255,255,255,0)");
+  fog.addColorStop(1, "rgba(255,255,255,0.13)");
+
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, view.w, view.h);
+}
+
+/* =========================================================
+   13. HUD UPDATE
+========================================================= */
+
+function updateHUD() {
+  const hour = getHour();
+  const h = Math.floor(hour);
+  const m = Math.floor((hour - h) * 60);
+
+  clockText.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  dayText.textContent = `DAY ${state.time.day}`;
+
+  energyBar.style.width = `${state.player.energy}%`;
+  staminaBar.style.width = `${state.player.stamina}%`;
+  focusBar.style.width = `${state.player.focus}%`;
+
+  distanceText.textContent = `${(state.distanceTravelled / 1000).toFixed(1)} KM WALKED`;
+
+  regionName.textContent = getRegionName();
+}
+
+/* =========================================================
+   14. MAIN LOOP
+========================================================= */
+
+function update(dt) {
+  if (!state.started || state.paused) return;
+
+  updateTime(dt);
+  updatePlayer(dt);
+  updateCamera(dt);
+  updateDiscovery();
+  updateHUD();
+}
+
+function render() {
+  clearSky();
+  drawSunMoon();
+  drawDistantMountains();
+  drawTerrain();
+  drawLandmarks();
+  drawPlayer();
+  drawAtmosphere();
+}
+
+function loop(now) {
+  const rawDt = (now - state.lastTime) / 1000;
+  const dt = Math.min(0.033, rawDt);
+  state.lastTime = now;
+
+  update(dt);
+  render();
+
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
+setInterval(() => {
+  if (state.started) saveGame();
+}, 5000);
+</script>
+</body>
+</html>
