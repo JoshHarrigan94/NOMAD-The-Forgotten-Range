@@ -346,12 +346,12 @@ const Utils = {
     return total / norm;
   },
 
-  worldToScreen(x, y) {
-    return {
-      x: (x - STATE.camera.x) * STATE.camera.zoom + App.view.cx,
-      y: (y - STATE.camera.y) * STATE.camera.zoom + App.view.cy
-    };
-  },
+  worldToScreen(x, y, z = 0) {
+  return {
+    x: (x - STATE.camera.x) * STATE.camera.zoom + App.view.cx,
+    y: (y - STATE.camera.y) * STATE.camera.zoom + App.view.cy - z * STATE.camera.zoom
+  };
+},
 
   screenToWorld(x, y) {
     return {
@@ -755,88 +755,33 @@ const WorldSystem = {
 
 const TerrainSystem = {
   profiles: {
-    water: {
-      speed: 0.42,
-      acceleration: 0.55,
-      friction: 2.8,
-      staminaCost: 2.2,
-      colourLight: "#577b9b",
-      colourDark: "#3f647f",
-      label: "Cold Water"
-    },
-
-    sand: {
-      speed: 0.76,
-      acceleration: 0.72,
-      friction: 6.2,
-      staminaCost: 1.2,
-      colourLight: "#c8a77d",
-      colourDark: "#a98966",
-      label: "Soft Sand"
-    },
-
-    grass: {
-      speed: 1,
-      acceleration: 1,
-      friction: 3.2,
-      staminaCost: 0.2,
-      colourLight: "#5f7f69",
-      colourDark: "#425f52",
-      label: "Open Ground"
-    },
-
-    rock: {
-      speed: 0.82,
-      acceleration: 0.78,
-      friction: 2.2,
-      staminaCost: 1.9,
-      colourLight: "#5c6073",
-      colourDark: "#3f4354",
-      label: "Stone Ridge"
-    },
-
-    snow: {
-      speed: 0.72,
-      acceleration: 0.58,
-      friction: 0.95,
-      staminaCost: 0.8,
-      colourLight: "#d6d8df",
-      colourDark: "#9fa8ba",
-      label: "Powder Snow"
-    }
+    water: { speed: 0.42, acceleration: 0.55, friction: 2.8, staminaCost: 2.2, colourLight: "#577b9b", colourDark: "#3f647f", label: "Cold Water" },
+    sand: { speed: 0.76, acceleration: 0.72, friction: 6.2, staminaCost: 1.2, colourLight: "#c8a77d", colourDark: "#a98966", label: "Soft Sand" },
+    grass: { speed: 1, acceleration: 1, friction: 3.2, staminaCost: 0.2, colourLight: "#5f7f69", colourDark: "#425f52", label: "Open Ground" },
+    rock: { speed: 0.82, acceleration: 0.78, friction: 2.2, staminaCost: 1.9, colourLight: "#5c6073", colourDark: "#3f4354", label: "Stone Ridge" },
+    snow: { speed: 0.72, acceleration: 0.58, friction: 0.95, staminaCost: 0.8, colourLight: "#d6d8df", colourDark: "#9fa8ba", label: "Powder Snow" }
   },
 
   getHeightAt(x, y) {
-    const n1 = Utils.fractalNoise(
-      x * CONFIG.terrain.noiseScale,
-      y * CONFIG.terrain.noiseScale
-    );
-   
-   getVisualHeightAt(x, y) {
-  return (this.getHeightAt(x, y) - 0.5) * CONFIG.terrain.heightScale;
-},
-
-getAltitudeBand(x, y) {
-  const h = this.getHeightAt(x, y);
-  return Math.floor(h / CONFIG.terrain.contourStep);
-},
-
-getDepthTint(x, y) {
-  const h = this.getHeightAt(x, y);
-  return Utils.clamp((h - 0.35) / 0.55, 0, 1);
-},
-
-    const n2 = Utils.fractalNoise(
-      x * CONFIG.terrain.detailScale + 90,
-      y * CONFIG.terrain.detailScale - 40
-    );
-
+    const n1 = Utils.fractalNoise(x * CONFIG.terrain.noiseScale, y * CONFIG.terrain.noiseScale);
+    const n2 = Utils.fractalNoise(x * CONFIG.terrain.detailScale + 90, y * CONFIG.terrain.detailScale - 40);
     return n1 * 0.75 + n2 * 0.25;
+  },
+
+  getVisualHeightAt(x, y) {
+    return (this.getHeightAt(x, y) - 0.5) * CONFIG.terrain.heightScale;
+  },
+
+  getAltitudeBand(x, y) {
+    return Math.floor(this.getHeightAt(x, y) / CONFIG.terrain.contourStep);
+  },
+
+  getDepthTint(x, y) {
+    return Utils.clamp((this.getHeightAt(x, y) - 0.35) / 0.55, 0, 1);
   },
 
   getTerrainAt(x, y) {
     const h = this.getHeightAt(x, y);
-
     if (h < 0.28) return "water";
     if (h < 0.38) return "sand";
     if (h < 0.58) return "grass";
@@ -845,13 +790,11 @@ getDepthTint(x, y) {
   },
 
   getProfileAt(x, y) {
-    const type = this.getTerrainAt(x, y);
-    return this.profiles[type] || this.profiles.grass;
+    return this.profiles[this.getTerrainAt(x, y)] || this.profiles.grass;
   },
 
   getSlopeAt(x, y) {
     const sample = 90;
-
     const left = this.getHeightAt(x - sample, y);
     const right = this.getHeightAt(x + sample, y);
     const up = this.getHeightAt(x, y - sample);
@@ -2341,22 +2284,17 @@ const RenderPipeline = {
   renderSky() {
     const colours = TimeSystem.getSkyPalette();
     const gradient = ctx.createLinearGradient(0, 0, App.view.w, App.view.h);
-
     gradient.addColorStop(0, colours[0]);
     gradient.addColorStop(0.58, colours[1]);
     gradient.addColorStop(1, colours[2]);
-
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, App.view.w, App.view.h);
-
     this.renderSunMoon();
   },
 
   renderSunMoon() {
     const hour = TimeSystem.getHour();
-    const progress = hour / 24;
-    const angle = progress * Math.PI * 2 - Math.PI;
-
+    const angle = (hour / 24) * Math.PI * 2 - Math.PI;
     const x = App.view.cx + Math.cos(angle) * App.view.w * 0.42;
     const y = App.view.cy + Math.sin(angle) * App.view.h * 0.38;
 
@@ -2371,8 +2309,8 @@ const RenderPipeline = {
 
   renderBackground() {
     this.renderDistantMountains();
-this.renderAltitudeHaze();
-HorizonEventSystem.renderDistantEvents();
+    this.renderAltitudeHaze();
+    HorizonEventSystem.renderDistantEvents();
   },
 
   renderDistantMountains() {
@@ -2394,28 +2332,24 @@ HorizonEventSystem.renderDistantEvents();
 
       for (let x = 0; x <= App.view.w + 80; x += 80) {
         const n = Utils.fractalNoise((x + parallaxX) * layer.scale, layer.y * 10);
-        const y = baseY - n * layer.amp;
-        ctx.lineTo(x, y);
+        ctx.lineTo(x, baseY - n * layer.amp);
       }
-
-      renderAltitudeHaze() {
-  const light = TimeSystem.getLightLevel();
-
-  const grad = ctx.createLinearGradient(0, 0, 0, App.view.h);
-  grad.addColorStop(0, `rgba(255,255,255,${0.08 + light * 0.04})`);
-  grad.addColorStop(0.45, "rgba(255,255,255,0.02)");
-  grad.addColorStop(1, "rgba(15,23,42,0.08)");
-
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, App.view.w, App.view.h);
-},
 
       ctx.lineTo(App.view.w, App.view.h);
       ctx.closePath();
-
       ctx.fillStyle = `rgba(15,23,42,${layer.alpha + light * 0.16})`;
       ctx.fill();
     }
+  },
+
+  renderAltitudeHaze() {
+    const light = TimeSystem.getLightLevel();
+    const grad = ctx.createLinearGradient(0, 0, 0, App.view.h);
+    grad.addColorStop(0, `rgba(255,255,255,${0.08 + light * 0.04})`);
+    grad.addColorStop(0.45, "rgba(255,255,255,0.02)");
+    grad.addColorStop(1, "rgba(15,23,42,0.08)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, App.view.w, App.view.h);
   },
 
   renderWorld() {
@@ -2426,76 +2360,306 @@ HorizonEventSystem.renderDistantEvents();
   },
 
   renderTerrainChunks() {
-  const chunks = ChunkSystem.getVisibleChunks();
-  const size = CONFIG.world.chunkSize;
-  const light = TimeSystem.getLightLevel();
+    const chunks = ChunkSystem.getVisibleChunks();
+    const size = CONFIG.world.chunkSize;
+    const light = TimeSystem.getLightLevel();
 
-  const sorted = chunks.slice().sort((a, b) => {
-    return (a.y + a.x * 0.15) - (b.y + b.x * 0.15);
-  });
+    const sorted = chunks.slice().sort((a, b) => (a.y + a.x * 0.15) - (b.y + b.x * 0.15));
 
-  for (const chunk of sorted) {
-    const height = TerrainSystem.getVisualHeightAt(chunk.x + size / 2, chunk.y + size / 2);
-    const s = Utils.worldToScreen(chunk.x, chunk.y, height);
+    for (const chunk of sorted) {
+      const midX = chunk.x + size / 2;
+      const midY = chunk.y + size / 2;
+      const height = TerrainSystem.getVisualHeightAt(midX, midY);
+      const depthTint = TerrainSystem.getDepthTint(midX, midY);
+      const s = Utils.worldToScreen(chunk.x, chunk.y, height);
 
-    const wobble = 46;
-    const localLight = chunk.variation > 0.5 ? light : light * 0.72;
-    const depthTint = TerrainSystem.getDepthTint(chunk.x + size / 2, chunk.y + size / 2);
+      const wobble = 46;
+      const localLight = chunk.variation > 0.5 ? light : light * 0.72;
 
-    ctx.save();
-
-    ctx.globalAlpha = 0.18 + depthTint * CONFIG.terrain.shadowStrength;
-    ctx.fillStyle = "#020617";
-
-    ctx.beginPath();
-    ctx.moveTo(s.x + 24, s.y + 32);
-    ctx.lineTo(s.x + size + 26, s.y + 48);
-    ctx.lineTo(s.x + size - 14, s.y + size + 56);
-    ctx.lineTo(s.x - 18, s.y + size + 34);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-
-    ctx.fillStyle = TerrainSystem.getColour(chunk.terrain, localLight + depthTint * 0.18);
-
-    const p1 = { x: s.x + Utils.noise2D(chunk.cx, chunk.cy) * wobble, y: s.y };
-    const p2 = { x: s.x + size, y: s.y + Utils.noise2D(chunk.cx + 1, chunk.cy) * wobble };
-    const p3 = { x: s.x + size - Utils.noise2D(chunk.cx, chunk.cy + 1) * wobble, y: s.y + size };
-    const p4 = { x: s.x, y: s.y + size - Utils.noise2D(chunk.cx - 1, chunk.cy) * wobble };
-
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.lineTo(p3.x, p3.y);
-    ctx.lineTo(p4.x, p4.y);
-    ctx.closePath();
-    ctx.fill();
-
-    const band = TerrainSystem.getAltitudeBand(chunk.x + size / 2, chunk.y + size / 2);
-
-    ctx.strokeStyle = band % 2 === 0
-      ? `rgba(255,255,255,${0.035 + depthTint * 0.04})`
-      : `rgba(15,23,42,${0.035 + depthTint * 0.04})`;
-
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    if (depthTint > 0.62) {
       ctx.save();
-      ctx.globalAlpha = 0.08 + depthTint * 0.08;
-      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 0.18 + depthTint * CONFIG.terrain.shadowStrength;
+      ctx.fillStyle = "#020617";
+      ctx.beginPath();
+      ctx.moveTo(s.x + 24, s.y + 32);
+      ctx.lineTo(s.x + size + 26, s.y + 48);
+      ctx.lineTo(s.x + size - 14, s.y + size + 56);
+      ctx.lineTo(s.x - 18, s.y + size + 34);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = TerrainSystem.getColour(chunk.terrain, localLight + depthTint * 0.18);
+
+      const p1 = { x: s.x + Utils.noise2D(chunk.cx, chunk.cy) * wobble, y: s.y };
+      const p2 = { x: s.x + size, y: s.y + Utils.noise2D(chunk.cx + 1, chunk.cy) * wobble };
+      const p3 = { x: s.x + size - Utils.noise2D(chunk.cx, chunk.cy + 1) * wobble, y: s.y + size };
+      const p4 = { x: s.x, y: s.y + size - Utils.noise2D(chunk.cx - 1, chunk.cy) * wobble };
+
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo((p2.x + p3.x) / 2, (p2.y + p3.y) / 2);
-      ctx.lineTo((p1.x + p4.x) / 2, (p1.y + p4.y) / 2);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      ctx.fill();
+
+      const band = TerrainSystem.getAltitudeBand(midX, midY);
+      ctx.strokeStyle = band % 2 === 0
+        ? `rgba(255,255,255,${0.035 + depthTint * 0.04})`
+        : `rgba(15,23,42,${0.035 + depthTint * 0.04})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  },
+
+  renderTraversalRings() {
+    const chunks = ChunkSystem.getVisibleChunks();
+    const t = performance.now() * 0.003;
+
+    for (const chunk of chunks) {
+      const rings = PuzzleSystem.getTraversalRingsInChunk(chunk.cx, chunk.cy);
+
+      for (const ring of rings) {
+        const z = TerrainSystem.getVisualHeightAt(ring.x, ring.y);
+        const s = Utils.worldToScreen(ring.x, ring.y, z);
+        const completed = STATE.traversal.ringsCompleted?.has(ring.id);
+
+        if (s.x < -80 || s.x > App.view.w + 80 || s.y < -80 || s.y > App.view.h + 80) continue;
+
+        ctx.save();
+        ctx.globalAlpha = completed ? 0.12 : 0.55 + Math.sin(t + ring.x) * 0.12;
+        ctx.strokeStyle = ring.type === "glide-ring" ? "#bae6fd" : ring.type === "ridge-ring" ? "#fda4af" : "#fde68a";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, TraversalSystem.getRingRadius(), TraversalSystem.getRingRadius() * 0.42, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  },
+
+  renderRelics() {
+    const chunks = ChunkSystem.getVisibleChunks();
+
+    for (const chunk of chunks) {
+      const relic = RelicSystem.generateRelic(chunk.cx, chunk.cy);
+      if (!relic) continue;
+      if (STATE.relics?.collected?.includes(relic.id)) continue;
+
+      const z = TerrainSystem.getVisualHeightAt(relic.x, relic.y);
+      const s = Utils.worldToScreen(relic.x, relic.y, z);
+
+      if (s.x < -80 || s.x > App.view.w + 80 || s.y < -80 || s.y > App.view.h + 80) continue;
+
+      const pulse = Math.sin(performance.now() * 0.004 + relic.x) * 0.5 + 0.5;
+
+      ctx.save();
+      ctx.globalAlpha = 0.65 + pulse * 0.25;
+      ctx.fillStyle = "#c4b5fd";
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y - 12);
+      ctx.lineTo(s.x + 10, s.y);
+      ctx.lineTo(s.x, s.y + 12);
+      ctx.lineTo(s.x - 10, s.y);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
     }
+  },
+
+  renderLandmarks() {
+    const chunks = ChunkSystem.getVisibleChunks();
+    const all = [];
+
+    for (const chunk of chunks) {
+      all.push(...LandmarkSystem.generateLandmarksForChunk(chunk.cx, chunk.cy));
+    }
+
+    all.sort((a, b) => a.y - b.y);
+
+    for (const lm of all) {
+      const z = TerrainSystem.getVisualHeightAt(lm.x, lm.y);
+      const s = Utils.worldToScreen(lm.x, lm.y, z);
+      const discovered = DiscoverySystem.hasDiscovered(lm.id);
+
+      if (s.x < -360 || s.x > App.view.w + 360 || s.y < -360 || s.y > App.view.h + 360) continue;
+
+      this.renderLandmarkShape(lm, s, discovered);
+
+      const d = Utils.dist(STATE.player.x, STATE.player.y, lm.x, lm.y);
+      if (d < 180 && !discovered) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.82)";
+        ctx.font = "12px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(lm.name, s.x, s.y - 70 * (lm.scale || 1));
+        ctx.restore();
+      }
+    }
+  },
+
+  renderLandmarkShape(lm, s, discovered) {
+    const scale = lm.scale || 1;
+
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.scale(scale, scale);
+    ctx.globalAlpha = discovered ? 0.32 : 1;
+
+    if (lm.type === "beacon") {
+      ctx.fillStyle = "#67e8f9";
+      ctx.beginPath();
+      ctx.arc(0, -18, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#67e8f9";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(0, 18);
+      ctx.stroke();
+    }
+
+    if (lm.type === "tower") {
+      ctx.fillStyle = "#fda4af";
+      ctx.beginPath();
+      ctx.moveTo(0, -58);
+      ctx.lineTo(-16, 18);
+      ctx.lineTo(16, 18);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (lm.type === "ruin") {
+      ctx.fillStyle = "#d8b4fe";
+      ctx.fillRect(-22, -32, 9, 34);
+      ctx.fillRect(8, -44, 10, 46);
+      ctx.fillRect(-26, -36, 50, 7);
+    }
+
+    if (lm.type === "camp") {
+      ctx.fillStyle = "#fb7185";
+      ctx.beginPath();
+      ctx.moveTo(0, -30);
+      ctx.lineTo(-21, 12);
+      ctx.lineTo(21, 12);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (lm.type === "stone") {
+      ctx.fillStyle = "#cbd5e1";
+      ctx.beginPath();
+      ctx.moveTo(0, -36);
+      ctx.lineTo(-18, 14);
+      ctx.lineTo(20, 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (lm.type === "arch") {
+      ctx.strokeStyle = "#fef3c7";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.arc(0, 8, 34, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#fef3c7";
+      ctx.fillRect(-40, 4, 10, 44);
+      ctx.fillRect(30, 4, 10, 44);
+    }
+
+    if (lm.type === "observatory") {
+      ctx.fillStyle = "#bae6fd";
+      ctx.beginPath();
+      ctx.arc(0, -20, 28, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(-34, -20, 68, 18);
+    }
+
+    if (lm.type === "cable") {
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-54, -46);
+      ctx.lineTo(54, -16);
+      ctx.stroke();
+      ctx.fillStyle = "#e5e7eb";
+      ctx.fillRect(-48, -14, 14, 42);
+      ctx.fillRect(34, 0, 14, 32);
+    }
+
+    ctx.restore();
+  },
+
+  renderEntities() {
+    PlayerSystem.render();
+  },
+
+  renderForeground() {
+    this.renderAtmosphere();
+  },
+
+  renderAtmosphere() {
+    const light = TimeSystem.getLightLevel();
+    const weather = WeatherSystem.getProfile();
+
+    ctx.save();
+    ctx.globalAlpha = (1 - light) * 0.7;
+    ctx.fillStyle = "rgba(7,10,22,0.52)";
+    ctx.fillRect(0, 0, App.view.w, App.view.h);
+    ctx.fillStyle = weather.tint;
+    ctx.fillRect(0, 0, App.view.w, App.view.h);
+    ctx.restore();
+
+    const fog = ctx.createRadialGradient(
+      App.view.cx,
+      App.view.cy,
+      App.view.h * 0.08,
+      App.view.cx,
+      App.view.cy,
+      App.view.h * (0.65 + weather.fog)
+    );
+
+    fog.addColorStop(0, "rgba(255,255,255,0)");
+    fog.addColorStop(1, `rgba(255,255,255,${0.10 + weather.fog * 0.22})`);
+
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, App.view.w, App.view.h);
+  },
+
+  renderUI() {
+    UISystem.renderHUD();
+    UISystem.renderOverlay();
+    DiscoverySystem.renderNotification();
+    DiscoverySystem.renderDiscoveryLog();
+    MapSystem.renderWorldMap();
+    this.renderTraversalMessage();
+    DebugSystem.render();
+  },
+
+  renderTraversalMessage() {
+    if (!STATE.traversal.messageTimer || STATE.traversal.messageTimer <= 0) return;
+
+    const alpha = Utils.clamp(STATE.traversal.messageTimer / 2.8, 0, 1);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(255,255,255,0.86)";
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(STATE.traversal.message.toUpperCase(), App.view.cx, App.view.h - 96);
+    ctx.restore();
+  },
+
+  render() {
+    this.clear();
+    this.renderSky();
+    this.renderBackground();
+    this.renderWorld();
+    this.renderEntities();
+    this.renderForeground();
+    this.renderUI();
   }
-},
+};
 
 /* =========================================================
    27. UPDATE PIPELINE
