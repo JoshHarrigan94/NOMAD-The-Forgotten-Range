@@ -2,348 +2,150 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>NOMAD: The Forgotten Range</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>NOMAD</title>
 
 <style>
-  :root {
-    --bg: #111827;
-    --panel: rgba(12, 18, 30, 0.58);
-    --text: rgba(255,255,255,0.92);
-    --muted: rgba(255,255,255,0.62);
-    --line: rgba(255,255,255,0.18);
-    --accent: #7dd3fc;
-    --warm: #fb7185;
-  }
+/* =========================================================
+   00. DESIGN TOKENS
+========================================================= */
 
-  * {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
+/* =========================================================
+   01. BASE LAYOUT
+========================================================= */
 
-  html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: var(--bg);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: var(--text);
-  }
+/* =========================================================
+   02. HUD / UI SHELL
+========================================================= */
 
-  canvas {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-    touch-action: none;
-    background: #111827;
-  }
-
-  .hud {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
-  }
-
-  .top-left {
-    position: absolute;
-    top: 26px;
-    left: 28px;
-    max-width: 320px;
-  }
-
-  .region {
-    font-size: 13px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text);
-    margin-bottom: 14px;
-  }
-
-  .objective {
-    padding-left: 14px;
-    border-left: 2px solid var(--warm);
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.5;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .top-right {
-    position: absolute;
-    top: 26px;
-    right: 28px;
-    text-align: right;
-    color: var(--text);
-    font-size: 14px;
-    letter-spacing: 0.12em;
-  }
-
-  .bottom-left {
-    position: absolute;
-    left: 28px;
-    bottom: 28px;
-    width: 220px;
-  }
-
-  .bar-row {
-    display: grid;
-    grid-template-columns: 24px 1fr;
-    align-items: center;
-    gap: 10px;
-    margin: 10px 0;
-    color: white;
-    font-size: 15px;
-  }
-
-  .bar {
-    height: 8px;
-    background: rgba(255,255,255,0.16);
-    overflow: hidden;
-  }
-
-  .bar > span {
-    display: block;
-    height: 100%;
-    width: 70%;
-    background: white;
-  }
-
-  .bar.energy > span { background: #67e8f9; }
-  .bar.stamina > span { background: #f472b6; }
-  .bar.focus > span { background: #c4b5fd; }
-
-  .bottom-centre {
-    position: absolute;
-    bottom: 34px;
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 260px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 12px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .bottom-centre::before,
-  .bottom-centre::after {
-    content: "";
-    display: inline-block;
-    width: 80px;
-    height: 1px;
-    background: var(--line);
-    vertical-align: middle;
-    margin: 0 14px;
-  }
-
-  .mini-help {
-    position: absolute;
-    right: 28px;
-    bottom: 28px;
-    padding: 12px 14px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.7;
-    backdrop-filter: blur(10px);
-  }
-
-  .title-card {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: grid;
-    place-items: center;
-    background:
-      radial-gradient(circle at 70% 40%, rgba(251, 113, 133, 0.22), transparent 35%),
-      radial-gradient(circle at 25% 30%, rgba(125, 211, 252, 0.20), transparent 30%),
-      rgba(6, 10, 18, 0.88);
-    transition: opacity 400ms ease;
-  }
-
-  .title-inner {
-    text-align: center;
-    padding: 30px;
-  }
-
-  .mark {
-    font-size: 12px;
-    letter-spacing: 0.4em;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: clamp(52px, 11vw, 130px);
-    letter-spacing: 0.28em;
-    font-weight: 500;
-  }
-
-  .subtitle {
-    margin-top: 14px;
-    letter-spacing: 0.24em;
-    color: var(--muted);
-    text-transform: uppercase;
-    font-size: 13px;
-  }
-
-  .start {
-    margin-top: 34px;
-    display: inline-block;
-    border: 1px solid var(--line);
-    background: rgba(255,255,255,0.06);
-    padding: 14px 22px;
-    border-radius: 999px;
-    letter-spacing: 0.16em;
-    font-size: 12px;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-
-  .hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  @media (max-width: 700px) {
-    .top-left { top: 18px; left: 18px; }
-    .top-right { top: 18px; right: 18px; font-size: 12px; }
-    .bottom-left { left: 18px; bottom: 20px; width: 170px; }
-    .bottom-centre { display: none; }
-    .mini-help { display: none; }
-  }
+/* =========================================================
+   03. DEBUG PANEL
+========================================================= */
 </style>
 </head>
 
 <body>
 <canvas id="game"></canvas>
 
-<div class="hud">
-  <div class="top-left">
-    <div class="region" id="regionName">The Forgotten Range</div>
-    <div class="objective" id="objectiveText">
-      Find a way to the observatory<br />
-      Follow the old lights
-    </div>
-  </div>
-
-  <div class="top-right">
-    <div id="clockText">06:00</div>
-    <div id="dayText" style="color:rgba(255,255,255,0.6); margin-top:6px;">DAY 1</div>
-  </div>
-
-  <div class="bottom-left">
-    <div class="bar-row">⚡ <div class="bar energy"><span id="energyBar"></span></div></div>
-    <div class="bar-row">⛰ <div class="bar stamina"><span id="staminaBar"></span></div></div>
-    <div class="bar-row">◇ <div class="bar focus"><span id="focusBar"></span></div></div>
-  </div>
-
-  <div class="bottom-centre" id="distanceText">0.0 KM WALKED</div>
-
-  <div class="mini-help">
-    WASD / Arrows: Move<br />
-    Shift: Sprint<br />
-    E: Discover place<br />
-L: Discovery log<br />
-M: World map<br />
-R: Reset save
-  </div>
-</div>
-
-<div class="title-card" id="titleCard">
-  <div class="title-inner">
-    <div class="mark">THE FORGOTTEN RANGE</div>
-    <h1>NOMAD</h1>
-    <div class="subtitle">Journey. Move. Discover.</div>
-    <div class="start">Tap / Click / Press Any Key</div>
-  </div>
-</div>
+<div id="hud"></div>
+<div id="overlay"></div>
+<div id="debug"></div>
 
 <script>
 /* =========================================================
-   NOMAD: THE FORGOTTEN RANGE
-   Part 1 — Single-file playable foundation
-
-   Current systems:
-   - canvas renderer
-   - procedural low-poly world
-   - camera follow
-   - player movement
-   - sprint/stamina
-   - day/night colour cycle
-   - discovery beacons
-   - minimal HUD
-   - localStorage persistence
+   NOMAD — 20K SINGLE FILE SKELETON
+   Purpose:
+   Large-map low-poly exploration game.
+   This file is intentionally sectioned for massive iterative builds.
 ========================================================= */
 
 /* =========================================================
-   01. CANVAS SETUP
+   00. BUILD MANIFEST / CHANGELOG
+========================================================= */
+
+const BUILD = {
+  title: "NOMAD",
+  subtitle: "The Forgotten Range",
+  version: "0.0.1-skeleton",
+  targetLOC: 20000,
+  architecture: "single-file-html-css-js",
+  currentPhase: "empty-skeleton"
+};
+
+/* =========================================================
+   01. CANVAS / BOOT SYSTEM
 ========================================================= */
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-
-let view = {
-  w: 0,
-  h: 0,
-  cx: 0,
-  cy: 0
+const App = {
+  running: false,
+  started: false,
+  paused: false,
+  lastTime: performance.now(),
+  dt: 0,
+  frame: 0,
+  dpr: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
+  view: { w: 0, h: 0, cx: 0, cy: 0 }
 };
 
 function resizeCanvas() {
-  view.w = window.innerWidth;
-  view.h = window.innerHeight;
-  view.cx = view.w / 2;
-  view.cy = view.h / 2;
+  App.view.w = window.innerWidth;
+  App.view.h = window.innerHeight;
+  App.view.cx = App.view.w / 2;
+  App.view.cy = App.view.h / 2;
 
-  canvas.width = Math.floor(view.w * DPR);
-  canvas.height = Math.floor(view.h * DPR);
-
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  canvas.width = Math.floor(App.view.w * App.dpr);
+  canvas.height = Math.floor(App.view.h * App.dpr);
+  ctx.setTransform(App.dpr, 0, 0, App.dpr, 0, 0);
 }
 
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+function bootGame() {
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+}
+
+function startGame() {
+  App.started = true;
+  App.paused = false;
+}
+
+function pauseGame() {
+  App.paused = true;
+}
+
+function resumeGame() {
+  App.paused = false;
+}
+
+function hardResetGame() {
+  SaveSystem.clear();
+  location.reload();
+}
 
 /* =========================================================
-   02. CONFIG
+   02. GLOBAL CONFIG
 ========================================================= */
 
 const CONFIG = {
-  saveKey: "nomad_forgotten_range_save_v1",
+  canvas: {
+    background: "#101827"
+  },
 
   world: {
     seed: 92417,
     chunkSize: 420,
-    renderRadius: 4,
-    horizonParallax: 0.18
+    renderRadius: 4
+  },
+
+  camera: {
+    followSpeed: 4.5,
+    leadStrength: 42,
+    leadSpeed: 4,
+    zoom: 1
   },
 
   player: {
-    baseSpeed: 145,
-    sprintSpeed: 235,
-    acceleration: 11,
-    friction: 8,
+    spawnX: 0,
+    spawnY: 0,
     radius: 12,
-staminaDrain: 22,
-staminaRecover: 16,
+    walkSpeed: 145,
+    sprintSpeed: 235,
+    acceleration: 10,
+    friction: 5,
+    maxVelocity: 320,
+    staminaDrain: 22,
+    staminaRecover: 16
+  },
 
-walkAcceleration: 9,
-sprintAcceleration: 13,
-turnResponsiveness: 10,
-coastFriction: 3.2,
-brakeFriction: 8.5,
-maxVelocity: 320,
-cameraLead: 42,
-cameraDrift: 3.8
+  terrain: {
+    noiseScale: 0.0012,
+    detailScale: 0.0035
+  },
+
+  weather: {
+    default: "clear"
   },
 
   time: {
@@ -351,1781 +153,1617 @@ cameraDrift: 3.8
     startHour: 6
   },
 
-  discovery: {
-  interactionRadius: 82,
-  notificationSeconds: 4
-},
+  landmarks: {},
+  traversal: {},
+  discovery: {},
+  map: {},
+  audio: {},
+  progression: {},
 
-landmarks: {
-  megaDistance: 2600,
-  megaVisibility: 3600
-},
-
-weather: {
-  transitionSpeed: 0.018,
-  particleCount: 160,
-  strangeLightChance: 0.000018
-},
-
-traversal: {
-  climbRadius: 95,
-  ringRadius: 34,
-  ringRewardFocus: 6,
-  ringRewardStamina: 10
-}
+  debug: {
+    enabled: false
+  }
 };
+
 /* =========================================================
-   03. STATE
+   03. GLOBAL STATE
 ========================================================= */
 
-const state = {
-  started: false,
-  paused: false,
-  lastTime: performance.now(),
-
-  distanceTravelled: 0,
-  discovered: new Set(),
-  discoveryLog: [],
-notification: {
-  text: "",
-  timer: 0
-},
-showLog: false,
-weather: {
-  current: "clear",
-  blend: 0,
-  timer: 0,
-  strangeLight: false,
-  strangeLightTimer: 0
-},
-
-showMap: false,
-visitedChunks: new Set(),
-
-particles: [],
-  time: {
-    elapsed: 0,
-    day: 1
-  },
-  
-  traversal: {
-  climbing: false,
-  climbTarget: null,
-  ringsCompleted: new Set(),
-  ringMessageTimer: 0,
-  ringMessage: ""
-},
-
+const STATE = {
   player: {
-    x: 0,
-    y: 0,
+    x: CONFIG.player.spawnX,
+    y: CONFIG.player.spawnY,
     vx: 0,
     vy: 0,
+    facing: 0,
     stamina: 100,
     energy: 100,
-    focus: 72,
-    facing: 0,
-lastTerrain: "grass",
-slopeX: 0,
-slopeY: 0,
-flow: 0
+    focus: 75
   },
 
   camera: {
     x: 0,
-y: 0,
-leadX: 0,
-leadY: 0
+    y: 0,
+    leadX: 0,
+    leadY: 0,
+    zoom: CONFIG.camera.zoom
+  },
+
+  world: {
+    seed: CONFIG.world.seed,
+    distanceTravelled: 0
   },
 
   input: {
-    up: false,
-    down: false,
-    left: false,
-    right: false,
-    sprint: false,
-    interact: false
+    keys: {},
+    pressed: {},
+    pointer: {
+      active: false,
+      startX: 0,
+      startY: 0,
+      x: 0,
+      y: 0
+    }
   },
 
-  pointer: {
-    active: false,
-    startX: 0,
-    startY: 0,
-    x: 0,
-    y: 0
+  time: {
+    elapsed: 0,
+    day: 1
+  },
+
+  weather: {
+    current: CONFIG.weather.default
+  },
+
+  terrain: {},
+  landmarks: {},
+  traversal: {},
+  discovery: {},
+  map: {},
+  progression: {},
+  audio: {},
+
+  ui: {
+    toast: "",
+    toastTimer: 0
+  },
+
+  debug: {
+    enabled: CONFIG.debug.enabled
   }
 };
 
 /* =========================================================
-   04. DOM REFERENCES
+   04. UTILITY LIBRARY
 ========================================================= */
 
-const titleCard = document.getElementById("titleCard");
-const clockText = document.getElementById("clockText");
-const dayText = document.getElementById("dayText");
-const energyBar = document.getElementById("energyBar");
-const staminaBar = document.getElementById("staminaBar");
-const focusBar = document.getElementById("focusBar");
-const distanceText = document.getElementById("distanceText");
-const objectiveText = document.getElementById("objectiveText");
-const regionName = document.getElementById("regionName");
+const Utils = {
+  clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  },
 
-/* =========================================================
-   05. UTILS
-========================================================= */
+  lerp(a, b, t) {
+    return a + (b - a) * Utils.clamp(t, 0, 1);
+  },
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
+  dist(x1, y1, x2, y2) {
+    return Math.hypot(x2 - x1, y2 - y1);
+  },
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
+  hash(n) {
+    const x = Math.sin(n) * 43758.5453123;
+    return x - Math.floor(x);
+  },
 
-function smoothstep(edge0, edge1, x) {
-  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-  return t * t * (3 - 2 * t);
-}
+  seededRandom(seed) {
+    return Utils.hash(seed);
+  },
 
-function dist(a, b, c, d) {
-  return Math.hypot(c - a, d - b);
-}
+  noise2D(x, y, seed = CONFIG.world.seed) {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    const fx = x - ix;
+    const fy = y - iy;
 
-function hash(n) {
-  n = Math.sin(n) * 43758.5453123;
-  return n - Math.floor(n);
-}
+    const h = (a, b) => Utils.hash(a * 127.1 + b * 311.7 + seed * 0.017);
 
-function hash2(x, y, seed = CONFIG.world.seed) {
-  return hash(x * 127.1 + y * 311.7 + seed * 0.017);
-}
+    const a = h(ix, iy);
+    const b = h(ix + 1, iy);
+    const c = h(ix, iy + 1);
+    const d = h(ix + 1, iy + 1);
 
-function noise2(x, y) {
-  const ix = Math.floor(x);
-  const iy = Math.floor(y);
-  const fx = x - ix;
-  const fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
 
-  const a = hash2(ix, iy);
-  const b = hash2(ix + 1, iy);
-  const c = hash2(ix, iy + 1);
-  const d = hash2(ix + 1, iy + 1);
+    return Utils.lerp(Utils.lerp(a, b, ux), Utils.lerp(c, d, ux), uy);
+  },
 
-  const ux = fx * fx * (3 - 2 * fx);
-  const uy = fy * fy * (3 - 2 * fy);
+  fractalNoise(x, y, octaves = 5) {
+    let total = 0;
+    let amp = 1;
+    let freq = 1;
+    let norm = 0;
 
-  return lerp(lerp(a, b, ux), lerp(c, d, ux), uy);
-}
+    for (let i = 0; i < octaves; i++) {
+      total += Utils.noise2D(x * freq, y * freq) * amp;
+      norm += amp;
+      amp *= 0.5;
+      freq *= 2;
+    }
 
-function fractalNoise(x, y) {
-  let total = 0;
-  let amp = 1;
-  let freq = 1;
-  let norm = 0;
+    return total / norm;
+  },
 
-  for (let i = 0; i < 5; i++) {
-    total += noise2(x * freq, y * freq) * amp;
-    norm += amp;
-    amp *= 0.5;
-    freq *= 2;
+  worldToScreen(x, y) {
+    return {
+      x: (x - STATE.camera.x) * STATE.camera.zoom + App.view.cx,
+      y: (y - STATE.camera.y) * STATE.camera.zoom + App.view.cy
+    };
+  },
+
+  screenToWorld(x, y) {
+    return {
+      x: (x - App.view.cx) / STATE.camera.zoom + STATE.camera.x,
+      y: (y - App.view.cy) / STATE.camera.zoom + STATE.camera.y
+    };
   }
-
-  return total / norm;
-}
-
-function worldToScreen(x, y) {
-  return {
-    x: x - state.camera.x + view.cx,
-    y: y - state.camera.y + view.cy
-  };
-}
-
-function screenToWorld(x, y) {
-  return {
-    x: x + state.camera.x - view.cx,
-    y: y + state.camera.y - view.cy
-  };
-}
-
-/* =========================================================
-   06. SAVE / LOAD
-========================================================= */
-
-function saveGame() {
-  const payload = {
-    player: {
-      x: state.player.x,
-      y: state.player.y,
-      stamina: state.player.stamina,
-      energy: state.player.energy,
-      focus: state.player.focus
-    },
-    time: state.time,
-    distanceTravelled: state.distanceTravelled,
-    discovered: Array.from(state.discovered),
-discoveryLog: state.discoveryLog,
-ringsCompleted: Array.from(state.traversal.ringsCompleted),
-visitedChunks: Array.from(state.visitedChunks)
-  };
-
-  localStorage.setItem(CONFIG.saveKey, JSON.stringify(payload));
-}
-
-function loadGame() {
-  try {
-    const raw = localStorage.getItem(CONFIG.saveKey);
-    if (!raw) return;
-
-    const data = JSON.parse(raw);
-
-    if (data.player) {
-      state.player.x = Number(data.player.x || 0);
-      state.player.y = Number(data.player.y || 0);
-      state.player.stamina = Number(data.player.stamina || 100);
-      state.player.energy = Number(data.player.energy || 100);
-      state.player.focus = Number(data.player.focus || 72);
-    }
-
-    if (data.time) {
-      state.time.elapsed = Number(data.time.elapsed || 0);
-      state.time.day = Number(data.time.day || 1);
-    }
-
-    if (typeof data.distanceTravelled === "number") {
-      state.distanceTravelled = data.distanceTravelled;
-    }
-
-    if (Array.isArray(data.discovered)) {
-      state.discovered = new Set(data.discovered);
-    }
-    if (Array.isArray(data.discoveryLog)) {
-  state.discoveryLog = data.discoveryLog;
-}
-if (Array.isArray(data.ringsCompleted)) {
-  state.traversal.ringsCompleted = new Set(data.ringsCompleted);
-}
-if (Array.isArray(data.visitedChunks)) {
-  state.visitedChunks = new Set(data.visitedChunks);
-}
-  } catch (err) {
-    console.warn("Save failed to load", err);
-  }
-}
-
-function resetSave() {
-  localStorage.removeItem(CONFIG.saveKey);
-  location.reload();
-}
-
-loadGame();
-
-/* =========================================================
-   07. INPUT
-========================================================= */
-
-const keyMap = {
-  ArrowUp: "up",
-  KeyW: "up",
-  ArrowDown: "down",
-  KeyS: "down",
-  ArrowLeft: "left",
-  KeyA: "left",
-  ArrowRight: "right",
-  KeyD: "right",
-KeyL: "log",
-KeyM: "map",
-ShiftLeft: "sprint",
-  ShiftRight: "sprint"
 };
 
-window.addEventListener("keydown", (e) => {
-  startGame();
-
-  if (keyMap[e.code]) {
-    state.input[keyMap[e.code]] = true;
-  }
-
-  if (e.code === "KeyE") {
-    state.input.interact = true;
-  }
-  if (e.code === "KeyM") {
-  state.showMap = !state.showMap;
-}
-  if (e.code === "KeyL") {
-  state.showLog = !state.showLog;
-}
-
-  if (e.code === "KeyR") {
-    resetSave();
-  }
-});
-
-window.addEventListener("keyup", (e) => {
-  if (keyMap[e.code]) {
-    state.input[keyMap[e.code]] = false;
-  }
-
-  if (e.code === "KeyE") {
-    state.input.interact = false;
-  }
-});
-
-canvas.addEventListener("pointerdown", (e) => {
-  startGame();
-  state.pointer.active = true;
-  state.pointer.startX = e.clientX;
-  state.pointer.startY = e.clientY;
-  state.pointer.x = e.clientX;
-  state.pointer.y = e.clientY;
-});
-
-canvas.addEventListener("pointermove", (e) => {
-  state.pointer.x = e.clientX;
-  state.pointer.y = e.clientY;
-});
-
-window.addEventListener("pointerup", () => {
-  state.pointer.active = false;
-});
-
-titleCard.addEventListener("click", startGame);
-
-function startGame() {
-  if (state.started) return;
-  state.started = true;
-  titleCard.classList.add("hidden");
-}
-
 /* =========================================================
-   08. WORLD GENERATION
+   05. SAVE / LOAD SYSTEM
 ========================================================= */
 
-function getTerrainAt(x, y) {
-  const n1 = fractalNoise(x * 0.0012, y * 0.0012);
-  const n2 = fractalNoise(x * 0.0035 + 90, y * 0.0035 - 40);
-  const height = n1 * 0.75 + n2 * 0.25;
+const SaveSystem = {
+  key: "nomad_20k_skeleton_save_v1",
 
-  if (height < 0.28) return "water";
-  if (height < 0.38) return "sand";
-  if (height < 0.58) return "grass";
-  if (height < 0.74) return "rock";
-  return "snow";
+  save() {
+    const payload = {
+      player: STATE.player,
+      camera: STATE.camera,
+      world: STATE.world,
+      time: STATE.time,
+      weather: STATE.weather,
+      map: {
+  ...STATE.map,
+  visitedChunks: Array.from(STATE.map.visitedChunks || [])
+},
+discovery: {
+  ...STATE.discovery,
+  discovered: Array.from(STATE.discovery.discovered || [])
+},
+traversal: {
+  ...STATE.traversal,
+  ringsCompleted: Array.from(STATE.traversal.ringsCompleted || [])
+},
+progression: STATE.progression
+    };
+
+    localStorage.setItem(this.key, JSON.stringify(payload));
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.key);
+      if (!raw) return;
+
+      const data = JSON.parse(raw);
+
+      if (data.player) Object.assign(STATE.player, data.player);
+      if (data.camera) Object.assign(STATE.camera, data.camera);
+      if (data.world) Object.assign(STATE.world, data.world);
+      if (data.time) Object.assign(STATE.time, data.time);
+      if (data.weather) Object.assign(STATE.weather, data.weather);
+      if (data.map) {
+  Object.assign(STATE.map, data.map);
+  STATE.map.visitedChunks = new Set(data.map.visitedChunks || []);
 }
 
-function getTerrainProfile(type) {
-  const profiles = {
+if (data.discovery) {
+  Object.assign(STATE.discovery, data.discovery);
+  STATE.discovery.discovered = new Set(data.discovery.discovered || []);
+}
+
+if (data.traversal) {
+  Object.assign(STATE.traversal, data.traversal);
+  STATE.traversal.ringsCompleted = new Set(data.traversal.ringsCompleted || []);
+}
+
+if (data.progression) Object.assign(STATE.progression, data.progression);
+    } catch (err) {
+      console.warn("Save failed to load:", err);
+    }
+  },
+
+  exportSave() {
+    return localStorage.getItem(this.key) || "";
+  },
+
+  importSave(raw) {
+    localStorage.setItem(this.key, raw);
+    this.load();
+  },
+
+  clear() {
+    localStorage.removeItem(this.key);
+  }
+};
+
+/* =========================================================
+   06. INPUT SYSTEM
+========================================================= */
+
+const InputSystem = {
+  keys: STATE.input.keys,
+  pressed: STATE.input.pressed,
+  pointer: STATE.input.pointer,
+
+  bind() {
+    window.addEventListener("keydown", (e) => {
+      this.keys[e.code] = true;
+      this.pressed[e.code] = true;
+
+      if (!App.started) startGame();
+      if (e.code === "Escape") App.paused ? resumeGame() : pauseGame();
+      if (e.code === "KeyR") hardResetGame();
+    });
+
+    window.addEventListener("keyup", (e) => {
+      this.keys[e.code] = false;
+    });
+
+    canvas.addEventListener("pointerdown", (e) => {
+      if (!App.started) startGame();
+
+      this.pointer.active = true;
+      this.pointer.startX = e.clientX;
+      this.pointer.startY = e.clientY;
+      this.pointer.x = e.clientX;
+      this.pointer.y = e.clientY;
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      this.pointer.x = e.clientX;
+      this.pointer.y = e.clientY;
+    });
+
+    window.addEventListener("pointerup", () => {
+      this.pointer.active = false;
+    });
+  },
+
+  update() {
+    this.pressed = STATE.input.pressed;
+  },
+
+  endFrame() {
+    STATE.input.pressed = {};
+    this.pressed = STATE.input.pressed;
+  },
+
+  isDown(code) {
+    return !!STATE.input.keys[code];
+  },
+
+  consumePress(code) {
+    if (STATE.input.pressed[code]) {
+      delete STATE.input.pressed[code];
+      return true;
+    }
+    return false;
+  },
+
+  getMoveVector() {
+    let x = 0;
+    let y = 0;
+
+    if (this.isDown("KeyW") || this.isDown("ArrowUp")) y -= 1;
+    if (this.isDown("KeyS") || this.isDown("ArrowDown")) y += 1;
+    if (this.isDown("KeyA") || this.isDown("ArrowLeft")) x -= 1;
+    if (this.isDown("KeyD") || this.isDown("ArrowRight")) x += 1;
+
+    if (STATE.input.pointer.active) {
+      const dx = STATE.input.pointer.x - STATE.input.pointer.startX;
+      const dy = STATE.input.pointer.y - STATE.input.pointer.startY;
+      const mag = Math.hypot(dx, dy);
+
+      if (mag > 10) {
+        const strength = Utils.clamp(mag / 90, 0, 1);
+        x += (dx / mag) * strength;
+        y += (dy / mag) * strength;
+      }
+    }
+
+    const mag = Math.hypot(x, y);
+    if (mag > 0) {
+      x /= mag;
+      y /= mag;
+    }
+
+    return { x, y, active: mag > 0 };
+  }
+};
+
+/* =========================================================
+   07. CAMERA SYSTEM
+========================================================= */
+
+const CameraSystem = {
+  update(dt) {
+    this.followPlayer(dt);
+    this.applyLead(dt);
+  },
+
+  followPlayer(dt) {
+    const targetX = STATE.player.x + STATE.camera.leadX;
+    const targetY = STATE.player.y + STATE.camera.leadY;
+
+    STATE.camera.x = Utils.lerp(STATE.camera.x, targetX, CONFIG.camera.followSpeed * dt);
+    STATE.camera.y = Utils.lerp(STATE.camera.y, targetY, CONFIG.camera.followSpeed * dt);
+  },
+
+  applyShake() {},
+
+  applyLead(dt) {
+    const speed = Math.hypot(STATE.player.vx, STATE.player.vy);
+    const strength = Utils.clamp(speed / CONFIG.player.sprintSpeed, 0, 1);
+
+    const tx = Math.cos(STATE.player.facing) * CONFIG.camera.leadStrength * strength;
+    const ty = Math.sin(STATE.player.facing) * CONFIG.camera.leadStrength * strength;
+
+    STATE.camera.leadX = Utils.lerp(STATE.camera.leadX, tx, CONFIG.camera.leadSpeed * dt);
+    STATE.camera.leadY = Utils.lerp(STATE.camera.leadY, ty, CONFIG.camera.leadSpeed * dt);
+  },
+
+  setZoom(value) {
+    STATE.camera.zoom = Utils.clamp(value, 0.5, 2.5);
+  }
+};
+
+/* =========================================================
+   08. TIME / DAY-NIGHT SYSTEM
+========================================================= */
+
+const TimeSystem = {
+  update(dt) {
+    STATE.time.elapsed += dt;
+
+    if (STATE.time.elapsed >= CONFIG.time.dayLengthSeconds) {
+      STATE.time.elapsed -= CONFIG.time.dayLengthSeconds;
+      STATE.time.day++;
+      SaveSystem.save();
+    }
+  },
+
+  getDayProgress() {
+    return STATE.time.elapsed / CONFIG.time.dayLengthSeconds;
+  },
+
+  getHour() {
+    return (CONFIG.time.startHour + this.getDayProgress() * 24) % 24;
+  },
+
+  getLightLevel() {
+    const hour = this.getHour();
+    const daylight = Math.sin(((hour - 6) / 24) * Math.PI * 2);
+    return Utils.clamp(daylight * 0.65 + 0.45, 0.08, 1);
+  },
+
+  getSkyPalette() {
+    const hour = this.getHour();
+
+    if (hour < 5 || hour > 21) return ["#111827", "#312e81", "#0f172a"];
+    if (hour < 8) return ["#3b4b73", "#d89ca5", "#ffd6a5"];
+    if (hour < 17) return ["#7aa6c2", "#b8d8d8", "#f2d3a0"];
+    if (hour < 20) return ["#334766", "#b7798c", "#f5b56b"];
+
+    return ["#1e293b", "#5b4b7a", "#111827"];
+  }
+};
+
+/* =========================================================
+   09. WEATHER / ATMOSPHERE SYSTEM
+========================================================= */
+
+const WeatherSystem = {
+  profiles: {
+    clear: { fog: 0.08, wind: 0.2, tint: "rgba(255,255,255,0)" },
+    mist: { fog: 0.24, wind: 0.12, tint: "rgba(210,220,255,0.08)" },
+    snow: { fog: 0.34, wind: 0.6, tint: "rgba(220,230,255,0.12)" },
+    rain: { fog: 0.18, wind: 0.55, tint: "rgba(120,150,190,0.12)" }
+  },
+
+  update(dt) {
+    if (!STATE.weather.timer) STATE.weather.timer = 0;
+    STATE.weather.timer += dt;
+
+    if (STATE.weather.timer > 45) {
+      STATE.weather.timer = 0;
+      STATE.weather.current = this.chooseWeather();
+    }
+  },
+
+  chooseWeather() {
+    const hour = TimeSystem.getHour();
+    const r = Math.random();
+
+    if (hour < 6 || hour > 21) {
+      if (r < 0.5) return "mist";
+    }
+
+    if (r < 0.2) return "snow";
+    if (r < 0.4) return "rain";
+    if (r < 0.62) return "mist";
+    return "clear";
+  },
+
+  getProfile() {
+    return this.profiles[STATE.weather.current] || this.profiles.clear;
+  },
+
+  transitionWeather() {},
+  spawnParticles() {},
+  renderParticles() {}
+};
+
+/* =========================================================
+   10. WORLD SEED / REGION SYSTEM
+========================================================= */
+
+const WorldSystem = {
+  seed: CONFIG.world.seed,
+
+  update() {
+    STATE.world.regionName = this.getRegionName();
+  },
+
+  getRegionAt(x = STATE.player.x, y = STATE.player.y) {
+    if (y < -3200) return "north";
+    if (y > 3200) return "south";
+    if (x < -3200) return "west";
+    if (x > 3200) return "east";
+    return "centre";
+  },
+
+  getRegionName(x = STATE.player.x, y = STATE.player.y) {
+    const region = this.getRegionAt(x, y);
+
+    const names = {
+      north: "The Pale North",
+      south: "South Glasslands",
+      west: "The Broken West",
+      east: "Amber Flats",
+      centre: "The Forgotten Range"
+    };
+
+    return names[region] || names.centre;
+  },
+
+  getBiomeAt(x, y) {
+    const terrain = TerrainSystem.getTerrainAt(x, y);
+
+    if (terrain === "water") return "lake";
+    if (terrain === "sand") return "dryland";
+    if (terrain === "grass") return "range";
+    if (terrain === "rock") return "ridge";
+    if (terrain === "snow") return "alpine";
+
+    return "range";
+  },
+
+  getWorldStats() {
+    return {
+      seed: STATE.world.seed,
+      region: STATE.world.regionName,
+      distanceKm: Number((STATE.world.distanceTravelled / 1000).toFixed(1))
+    };
+  }
+};
+
+/* =========================================================
+   11. TERRAIN ENGINE
+========================================================= */
+
+const TerrainSystem = {
+  profiles: {
     water: {
       speed: 0.42,
       acceleration: 0.55,
       friction: 2.8,
-      flowGain: 0.25,
       staminaCost: 2.2,
-      label: "Cold water"
+      colourLight: "#577b9b",
+      colourDark: "#3f647f",
+      label: "Cold Water"
     },
+
     sand: {
       speed: 0.76,
       acceleration: 0.72,
       friction: 6.2,
-      flowGain: 0.55,
       staminaCost: 1.2,
-      label: "Soft sand"
+      colourLight: "#c8a77d",
+      colourDark: "#a98966",
+      label: "Soft Sand"
     },
+
     grass: {
       speed: 1,
       acceleration: 1,
       friction: 3.2,
-      flowGain: 1,
       staminaCost: 0.2,
-      label: "Open ground"
+      colourLight: "#5f7f69",
+      colourDark: "#425f52",
+      label: "Open Ground"
     },
+
     rock: {
       speed: 0.82,
       acceleration: 0.78,
       friction: 2.2,
-      flowGain: 1.35,
       staminaCost: 1.9,
-      label: "Stone ridges"
+      colourLight: "#5c6073",
+      colourDark: "#3f4354",
+      label: "Stone Ridge"
     },
+
     snow: {
       speed: 0.72,
       acceleration: 0.58,
       friction: 0.95,
-      flowGain: 1.7,
       staminaCost: 0.8,
-      label: "Powder snow"
+      colourLight: "#d6d8df",
+      colourDark: "#9fa8ba",
+      label: "Powder Snow"
     }
-  };
+  },
 
-  return profiles[type] || profiles.grass;
-}
-
-function getTerrainAction(type) {
-  const actions = {
-    water: "wade",
-    sand: "push",
-    grass: "travel",
-    rock: "climb",
-    snow: "glide"
-  };
-
-  return actions[type] || "travel";
-}
-
-function getAltitudeAt(x, y) {
-  return fractalNoise(x * 0.0012, y * 0.0012);
-}
-
-function getTraversalDifficulty(type) {
-  const difficulty = {
-    water: 1.25,
-    sand: 1.1,
-    grass: 0.85,
-    rock: 1.45,
-    snow: 1.2
-  };
-
-  return difficulty[type] || 1;
-}
-
-function getSlopeVector(x, y) {
-  const sample = 90;
-
-  const left = fractalNoise((x - sample) * 0.0012, y * 0.0012);
-  const right = fractalNoise((x + sample) * 0.0012, y * 0.0012);
-  const up = fractalNoise(x * 0.0012, (y - sample) * 0.0012);
-  const down = fractalNoise(x * 0.0012, (y + sample) * 0.0012);
-
-  return {
-    x: (left - right) * 2,
-    y: (up - down) * 2
-  };
-}
-
-function terrainColour(type, light) {
-  const palettes = {
-    water: ["#577b9b", "#3f647f"],
-    sand: ["#c8a77d", "#a98966"],
-    grass: ["#5f7f69", "#425f52"],
-    rock: ["#5c6073", "#3f4354"],
-    snow: ["#d6d8df", "#9fa8ba"]
-  };
-
-  const pair = palettes[type] || palettes.grass;
-  return light > 0.5 ? pair[0] : pair[1];
-}
-
-function getChunkKey(cx, cy) {
-  return `${cx},${cy}`;
-}
-
-function getVisibleChunks() {
-  const size = CONFIG.world.chunkSize;
-  const camChunkX = Math.floor(state.camera.x / size);
-  const camChunkY = Math.floor(state.camera.y / size);
-  const chunks = [];
-
-  for (let y = camChunkY - CONFIG.world.renderRadius; y <= camChunkY + CONFIG.world.renderRadius; y++) {
-    for (let x = camChunkX - CONFIG.world.renderRadius; x <= camChunkX + CONFIG.world.renderRadius; x++) {
-      chunks.push({ x, y, key: getChunkKey(x, y) });
-    }
-  }
-
-  return chunks;
-}
-
-function getLandmarkName(type, cx, cy) {
-  const prefixes = {
-    beacon: ["Old", "Silent", "Amber", "North", "Fallen"],
-    ruin: ["Broken", "Grey", "Hollow", "Sunken", "Forgotten"],
-    camp: ["Last", "Cold", "Low", "Ash", "Wanderer's"],
-    stone: ["White", "Black", "Split", "Ancient", "Glass"],
-    tower: ["Signal", "Watch", "Storm", "Pale", "Far"],
-    arch: ["Giant", "Dawn", "Weathered", "Twin", "High"],
-    observatory: ["Moon", "Star", "Upper", "Cloud", "Final"],
-    cable: ["Old", "Rust", "Eastern", "Broken", "High"]
-  };
-
-  const nouns = {
-    beacon: ["Beacon", "Light", "Marker", "Signal", "Flare"],
-    ruin: ["Ruin", "Gatehouse", "Shelter", "Station", "Steps"],
-    camp: ["Camp", "Outpost", "Fireplace", "Rest", "Tent"],
-    stone: ["Stone", "Monolith", "Marker", "Pillar", "Shard"],
-    tower: ["Tower", "Relay", "Spire", "Needle", "Watch"],
-    arch: ["Arch", "Pass", "Crown", "Span", "Gate"],
-    observatory: ["Observatory", "Lens", "Dome", "Eye", "Platform"],
-    cable: ["Cableway", "Lift", "Line", "Crossing", "Gantry"]
-  };
-
-  const p = prefixes[type] || prefixes.stone;
-  const n = nouns[type] || nouns.stone;
-
-  const a = p[Math.floor(hash2(cx + 4, cy - 9) * p.length)];
-  const b = n[Math.floor(hash2(cx - 6, cy + 13) * n.length)];
-
-  return `${a} ${b}`;
-}
-
-function getLandmarksInChunk(cx, cy) {
-  const items = [];
-  const size = CONFIG.world.chunkSize;
-  const r = hash2(cx, cy);
-
-  if (r > 0.72) {
-    const lx = cx * size + hash2(cx + 13, cy - 7) * size;
-    const ly = cy * size + hash2(cx - 4, cy + 19) * size;
-
-    const types = ["beacon", "ruin", "camp", "stone", "tower"];
-    const type = types[Math.floor(hash2(cx + 1, cy + 1) * types.length)];
-    const id = `${type}:${cx}:${cy}`;
-
-    items.push({
-      id,
-      type,
-      name: getLandmarkName(type, cx, cy),
-      x: lx,
-      y: ly,
-      scale: 1,
-      mega: false,
-      discovered: state.discovered.has(id)
-    });
-  }
-
-  const megaRoll = hash2(cx * 3, cy * 3);
-
-  if (megaRoll > 0.955) {
-    const megaTypes = ["arch", "observatory", "cable", "tower"];
-    const type = megaTypes[Math.floor(hash2(cx + 17, cy - 11) * megaTypes.length)];
-    const id = `mega:${type}:${cx}:${cy}`;
-
-    items.push({
-      id,
-      type,
-      name: getLandmarkName(type, cx, cy),
-      x: cx * size + size * 0.5,
-      y: cy * size + size * 0.5,
-      scale: 2.5 + hash2(cx - 2, cy + 8) * 1.6,
-      mega: true,
-      discovered: state.discovered.has(id)
-    });
-  }
-
-  return items;
-}
-
-function getTraversalRingsInChunk(cx, cy) {
-  const items = [];
-  const size = CONFIG.world.chunkSize;
-  const roll = hash2(cx - 31, cy + 47);
-
-  if (roll < 0.82) return items;
-
-  const x = cx * size + hash2(cx + 91, cy - 14) * size;
-  const y = cy * size + hash2(cx - 22, cy + 83) * size;
-  const terrain = getTerrainAt(x, y);
-  const altitude = getAltitudeAt(x, y);
-
-  if (terrain === "water") return items;
-
-  const type = altitude > 0.68 ? "ridge-ring" : terrain === "snow" ? "glide-ring" : "path-ring";
-  const id = `ring:${type}:${cx}:${cy}`;
-
-  items.push({
-    id,
-    type,
-    x,
-    y,
-    terrain,
-    completed: state.traversal.ringsCompleted.has(id)
-  });
-
-  return items;
-}
-
-function getRegionName() {
-  const x = state.player.x;
-  const y = state.player.y;
-
-  if (y < -3000) return "The Pale North";
-  if (x > 2600) return "Amber Flats";
-  if (x < -2600) return "The Broken West";
-  if (y > 2800) return "South Glasslands";
-  return "The Forgotten Range";
-}
-
-/* =========================================================
-   09. PLAYER UPDATE
-========================================================= */
-
-function updatePlayer(dt) {
-  let ix = 0;
-  let iy = 0;
-
-  if (state.input.up) iy -= 1;
-  if (state.input.down) iy += 1;
-  if (state.input.left) ix -= 1;
-  if (state.input.right) ix += 1;
-
-  if (state.pointer.active) {
-    const dx = state.pointer.x - state.pointer.startX;
-    const dy = state.pointer.y - state.pointer.startY;
-    const mag = Math.hypot(dx, dy);
-
-    if (mag > 10) {
-      const strength = clamp(mag / 90, 0, 1);
-      ix += (dx / mag) * strength;
-      iy += (dy / mag) * strength;
-    }
-  }
-
-  const inputMag = Math.hypot(ix, iy);
-
-  if (inputMag > 0) {
-    ix /= inputMag;
-    iy /= inputMag;
-  }
-
-  const terrain = getTerrainAt(state.player.x, state.player.y);
-  const profile = getTerrainProfile(terrain);
-  const slope = getSlopeVector(state.player.x, state.player.y);
-
-  state.player.lastTerrain = terrain;
-  state.player.slopeX = lerp(state.player.slopeX, slope.x, 2.2 * dt);
-  state.player.slopeY = lerp(state.player.slopeY, slope.y, 2.2 * dt);
-
-  const sprinting = state.input.sprint && state.player.stamina > 2 && inputMag > 0;
-  const targetSpeed = sprinting ? CONFIG.player.sprintSpeed : CONFIG.player.baseSpeed;
-  const accel = sprinting ? CONFIG.player.sprintAcceleration : CONFIG.player.walkAcceleration;
-
-  const desiredVx = ix * targetSpeed * profile.speed;
-  const desiredVy = iy * targetSpeed * profile.speed;
-
-  const slopeAssist = 38 * profile.flowGain;
-  const slopeVx = state.player.slopeX * slopeAssist;
-  const slopeVy = state.player.slopeY * slopeAssist;
-
-  if (inputMag > 0) {
-    state.player.vx = lerp(
-      state.player.vx,
-      desiredVx + slopeVx,
-      accel * profile.acceleration * dt
+  getHeightAt(x, y) {
+    const n1 = Utils.fractalNoise(
+      x * CONFIG.terrain.noiseScale,
+      y * CONFIG.terrain.noiseScale
     );
 
-    state.player.vy = lerp(
-      state.player.vy,
-      desiredVy + slopeVy,
-      accel * profile.acceleration * dt
+    const n2 = Utils.fractalNoise(
+      x * CONFIG.terrain.detailScale + 90,
+      y * CONFIG.terrain.detailScale - 40
     );
-  } else {
-    const friction = profile.friction || CONFIG.player.coastFriction;
 
-    state.player.vx = lerp(state.player.vx, slopeVx, friction * dt);
-    state.player.vy = lerp(state.player.vy, slopeVy, friction * dt);
-  }
+    return n1 * 0.75 + n2 * 0.25;
+  },
 
-  const velocity = Math.hypot(state.player.vx, state.player.vy);
+  getTerrainAt(x, y) {
+    const h = this.getHeightAt(x, y);
 
-  if (velocity > CONFIG.player.maxVelocity) {
-    const scale = CONFIG.player.maxVelocity / velocity;
-    state.player.vx *= scale;
-    state.player.vy *= scale;
-  }
+    if (h < 0.28) return "water";
+    if (h < 0.38) return "sand";
+    if (h < 0.58) return "grass";
+    if (h < 0.74) return "rock";
+    return "snow";
+  },
 
-  const oldX = state.player.x;
-  const oldY = state.player.y;
+  getProfileAt(x, y) {
+    const type = this.getTerrainAt(x, y);
+    return this.profiles[type] || this.profiles.grass;
+  },
 
-  state.player.x += state.player.vx * dt;
-  state.player.y += state.player.vy * dt;
+  getSlopeAt(x, y) {
+    const sample = 90;
 
-  const moved = dist(oldX, oldY, state.player.x, state.player.y);
-  state.distanceTravelled += moved;
+    const left = this.getHeightAt(x - sample, y);
+    const right = this.getHeightAt(x + sample, y);
+    const up = this.getHeightAt(x, y - sample);
+    const down = this.getHeightAt(x, y + sample);
 
-  const currentVelocity = Math.hypot(state.player.vx, state.player.vy);
+    return {
+      x: (left - right) * 2,
+      y: (up - down) * 2
+    };
+  },
 
-  if (currentVelocity > 4) {
-    state.player.facing = Math.atan2(state.player.vy, state.player.vx);
-  }
+  getFrictionAt(x, y) {
+    return this.getProfileAt(x, y).friction;
+  },
 
-  const terrainCost = profile.staminaCost * getTraversalDifficulty(terrain);
+  getTraversalCostAt(x, y) {
+    return this.getProfileAt(x, y).staminaCost;
+  },
 
-if (sprinting) {
-  state.player.stamina -= (CONFIG.player.staminaDrain + terrainCost) * dt;
-} else if (inputMag > 0 && terrain !== "grass") {
-  state.player.stamina -= terrainCost * dt;
-} else {
-  state.player.stamina += CONFIG.player.staminaRecover * dt;
-}
+  getColour(type, light = 1) {
+    const p = this.profiles[type] || this.profiles.grass;
+    return light > 0.5 ? p.colourLight : p.colourDark;
+  },
 
-if (terrain === "rock" && inputMag > 0) {
-  state.player.flow = lerp(state.player.flow, 0.35, 2 * dt);
-}
-
-if (terrain === "snow" && currentVelocity > 120) {
-  state.player.stamina += 4 * dt;
-}
-
-  state.player.stamina = clamp(state.player.stamina, 0, 100);
-
-  const flowTarget = clamp(currentVelocity / CONFIG.player.sprintSpeed, 0, 1);
-  state.player.flow = lerp(state.player.flow, flowTarget, 3.5 * dt);
-}
-
-function updateCamera(dt) {
-  const velocity = Math.hypot(state.player.vx, state.player.vy);
-  const leadStrength = clamp(velocity / CONFIG.player.sprintSpeed, 0, 1);
-
-  const targetLeadX = Math.cos(state.player.facing) * CONFIG.player.cameraLead * leadStrength;
-  const targetLeadY = Math.sin(state.player.facing) * CONFIG.player.cameraLead * leadStrength;
-
-  state.camera.leadX = lerp(state.camera.leadX, targetLeadX, CONFIG.player.cameraDrift * dt);
-  state.camera.leadY = lerp(state.camera.leadY, targetLeadY, CONFIG.player.cameraDrift * dt);
-
-  state.camera.x = lerp(state.camera.x, state.player.x + state.camera.leadX, 4.2 * dt);
-  state.camera.y = lerp(state.camera.y, state.player.y + state.camera.leadY, 4.2 * dt);
-}
+  renderTerrain() {},
+  renderContours() {},
+  renderShadows() {}
+};
 
 /* =========================================================
-   10. DISCOVERY
+   12. CHUNK STREAMING SYSTEM
 ========================================================= */
 
-function getNearbyLandmark() {
-  const chunks = getVisibleChunks();
+const ChunkSystem = {
+  chunks: new Map(),
 
-  for (const chunk of chunks) {
-    const landmarks = getLandmarksInChunk(chunk.x, chunk.y);
+  getChunkKey(cx, cy) {
+    return `${cx},${cy}`;
+  },
 
-    for (const lm of landmarks) {
-      if (state.discovered.has(lm.id)) continue;
+  getChunkCoords(x, y) {
+    return {
+      x: Math.floor(x / CONFIG.world.chunkSize),
+      y: Math.floor(y / CONFIG.world.chunkSize)
+    };
+  },
 
-      const d = dist(state.player.x, state.player.y, lm.x, lm.y);
-      if (d <= CONFIG.discovery.interactionRadius) {
-        return lm;
+  getVisibleChunks() {
+    const size = CONFIG.world.chunkSize;
+    const cx = Math.floor(STATE.camera.x / size);
+    const cy = Math.floor(STATE.camera.y / size);
+    const chunks = [];
+
+    for (let y = cy - CONFIG.world.renderRadius; y <= cy + CONFIG.world.renderRadius; y++) {
+      for (let x = cx - CONFIG.world.renderRadius; x <= cx + CONFIG.world.renderRadius; x++) {
+        chunks.push(this.generateChunk(x, y));
       }
     }
-  }
 
-  return null;
-}
+    return chunks;
+  },
 
-function addDiscovery(lm) {
-  if (state.discovered.has(lm.id)) return;
+  generateChunk(cx, cy) {
+    const key = this.getChunkKey(cx, cy);
 
-  state.discovered.add(lm.id);
-
-  const entry = {
-    id: lm.id,
-    name: lm.name,
-    type: lm.type,
-    x: Math.round(lm.x),
-    y: Math.round(lm.y),
-    day: state.time.day,
-    km: Number((state.distanceTravelled / 1000).toFixed(1))
-  };
-
-  state.discoveryLog.unshift(entry);
-  state.discoveryLog = state.discoveryLog.slice(0, 80);
-
-  state.notification.text = `Discovered: ${lm.name}`;
-  state.notification.timer = CONFIG.discovery.notificationSeconds;
-
-  state.player.focus = clamp(state.player.focus + (lm.mega ? 16 : 8), 0, 100);
-
-  saveGame();
-}
-
-function updateDiscovery(dt) {
-  const nearby = getNearbyLandmark();
-
-  if (nearby) {
-    objectiveText.innerHTML = `Press E to mark ${nearby.name}<br />${Math.round(dist(state.player.x, state.player.y, nearby.x, nearby.y))}m away`;
-
-    if (state.input.interact) {
-      addDiscovery(nearby);
+    if (this.chunks.has(key)) {
+      return this.chunks.get(key);
     }
-  } else {
-    const found = state.discoveryLog.length;
-    objectiveText.innerHTML = `Follow distant silhouettes<br />${found} places recorded`;
-  }
 
-  if (state.notification.timer > 0) {
-    state.notification.timer -= dt;
-  }
-}
+    const size = CONFIG.world.chunkSize;
+    const wx = cx * size;
+    const wy = cy * size;
+    const terrain = TerrainSystem.getTerrainAt(wx + size / 2, wy + size / 2);
 
-function getNearbyTraversalRing() {
-  const chunks = getVisibleChunks();
+    const chunk = {
+      key,
+      cx,
+      cy,
+      x: wx,
+      y: wy,
+      terrain,
+      biome: WorldSystem.getBiomeAt(wx + size / 2, wy + size / 2),
+      variation: Utils.noise2D(cx, cy)
+    };
 
-  for (const chunk of chunks) {
-    const rings = getTraversalRingsInChunk(chunk.x, chunk.y);
+    this.chunks.set(key, chunk);
+    return chunk;
+  },
 
-    for (const ring of rings) {
-      if (state.traversal.ringsCompleted.has(ring.id)) continue;
+  unloadDistantChunks() {
+    const current = this.getChunkCoords(STATE.camera.x, STATE.camera.y);
+    const maxDist = CONFIG.world.renderRadius + 3;
 
-      const d = dist(state.player.x, state.player.y, ring.x, ring.y);
-      if (d <= CONFIG.traversal.ringRadius) {
-        return ring;
+    for (const [key, chunk] of this.chunks.entries()) {
+      const d = Math.max(
+        Math.abs(chunk.cx - current.x),
+        Math.abs(chunk.cy - current.y)
+      );
+
+      if (d > maxDist) {
+        this.chunks.delete(key);
       }
     }
-  }
+  },
 
-  return null;
-}
+  update() {
+    this.getVisibleChunks();
+    this.unloadDistantChunks();
+  },
 
-function completeTraversalRing(ring) {
-  state.traversal.ringsCompleted.add(ring.id);
-
-  state.player.focus = clamp(state.player.focus + CONFIG.traversal.ringRewardFocus, 0, 100);
-  state.player.stamina = clamp(state.player.stamina + CONFIG.traversal.ringRewardStamina, 0, 100);
-
-  const label = ring.type === "glide-ring"
-    ? "Glide line found"
-    : ring.type === "ridge-ring"
-      ? "Ridge route mastered"
-      : "Path marker crossed";
-
-  state.traversal.ringMessage = label;
-  state.traversal.ringMessageTimer = 2.8;
-
-  saveGame();
-}
-
-function updateTraversal(dt) {
-  const ring = getNearbyTraversalRing();
-
-  if (ring) {
-    const speed = Math.hypot(state.player.vx, state.player.vy);
-    const needsSpeed = ring.type === "glide-ring" || ring.type === "ridge-ring";
-
-    if (!needsSpeed || speed > 110) {
-      completeTraversalRing(ring);
-    }
-  }
-
-  if (state.traversal.ringMessageTimer > 0) {
-    state.traversal.ringMessageTimer -= dt;
-  }
-}
-
-function updateExplorationMemory() {
-  const size = CONFIG.world.chunkSize;
-  const cx = Math.floor(state.player.x / size);
-  const cy = Math.floor(state.player.y / size);
-  state.visitedChunks.add(getChunkKey(cx, cy));
-}
+  render() {}
+};
 
 /* =========================================================
-   11. TIME
+   13. PLAYER MOVEMENT SYSTEM
 ========================================================= */
 
-function updateTime(dt) {
-  state.time.elapsed += dt;
-
-  if (state.time.elapsed >= CONFIG.time.dayLengthSeconds) {
-    state.time.elapsed -= CONFIG.time.dayLengthSeconds;
-    state.time.day += 1;
-    saveGame();
-  }
-}
-
-function getDayProgress() {
-  return state.time.elapsed / CONFIG.time.dayLengthSeconds;
-}
-
-function getHour() {
-  const progress = getDayProgress();
-  return (CONFIG.time.startHour + progress * 24) % 24;
-}
-
-function getLightLevel() {
-  const hour = getHour();
-  const daylight = Math.sin(((hour - 6) / 24) * Math.PI * 2);
-  return clamp(daylight * 0.65 + 0.45, 0.08, 1);
-}
-
-function getSkyGradient() {
-  const hour = getHour();
-
-  if (hour < 5 || hour > 21) {
-    return ["#111827", "#312e81", "#0f172a"];
-  }
-
-  if (hour < 8) {
-    return ["#3b4b73", "#d89ca5", "#ffd6a5"];
-  }
-
-  if (hour < 17) {
-    return ["#7aa6c2", "#b8d8d8", "#f2d3a0"];
-  }
-
-  if (hour < 20) {
-    return ["#334766", "#b7798c", "#f5b56b"];
-  }
-
-  return ["#1e293b", "#5b4b7a", "#111827"];
-}
-
-function getWeatherProfile(type) {
-  const profiles = {
-    clear: {
-      fog: 0.08,
-      wind: 0.3,
-      particles: false,
-      tint: "rgba(255,255,255,0)"
-    },
-
-    mist: {
-      fog: 0.24,
-      wind: 0.18,
-      particles: true,
-      tint: "rgba(210,220,255,0.08)"
-    },
-
-    snow: {
-      fog: 0.34,
-      wind: 0.62,
-      particles: true,
-      tint: "rgba(220,230,255,0.12)"
-    },
-
-    rain: {
-      fog: 0.18,
-      wind: 0.55,
-      particles: true,
-      tint: "rgba(120,150,190,0.12)"
-    },
-
-    duskwind: {
-      fog: 0.14,
-      wind: 0.82,
-      particles: true,
-      tint: "rgba(255,180,120,0.08)"
-    }
-  };
-
-  return profiles[type] || profiles.clear;
-}
-
-function chooseNextWeather() {
-  const hour = getHour();
-  const r = Math.random();
-
-  if (hour > 20 || hour < 5) {
-    if (r < 0.45) return "mist";
-  }
-
-  if (r < 0.18) return "snow";
-  if (r < 0.38) return "rain";
-  if (r < 0.58) return "mist";
-  if (r < 0.74) return "duskwind";
-
-  return "clear";
-}
-
-/* =========================================================
-   12. RENDER WORLD
-========================================================= */
-
-function clearSky() {
-  const colours = getSkyGradient();
-
-  const grad = ctx.createLinearGradient(0, 0, view.w, view.h);
-  grad.addColorStop(0, colours[0]);
-  grad.addColorStop(0.58, colours[1]);
-  grad.addColorStop(1, colours[2]);
-
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, view.w, view.h);
-}
-
-function drawSunMoon() {
-  const hour = getHour();
-  const progress = hour / 24;
-  const angle = progress * Math.PI * 2 - Math.PI;
-
-  const x = view.cx + Math.cos(angle) * view.w * 0.42;
-  const y = view.cy + Math.sin(angle) * view.h * 0.38;
-
-  ctx.save();
-  ctx.globalAlpha = hour > 6 && hour < 20 ? 0.86 : 0.45;
-  ctx.fillStyle = hour > 6 && hour < 20 ? "#fff7cc" : "#dbeafe";
-  ctx.beginPath();
-  ctx.arc(x, y, hour > 6 && hour < 20 ? 32 : 22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawWeatherTint() {
-  const weather = getWeatherProfile(state.weather.current);
-
-  ctx.save();
-  ctx.fillStyle = weather.tint;
-  ctx.fillRect(0, 0, view.w, view.h);
-  ctx.restore();
-}
-
-function drawDistantMountains() {
-  const light = getLightLevel();
-  const layers = [
-    { y: 0.36, amp: 80, scale: 0.0009, colour: `rgba(34, 43, 72, ${0.28 + light * 0.16})` },
-    { y: 0.46, amp: 120, scale: 0.0012, colour: `rgba(23, 31, 56, ${0.34 + light * 0.18})` },
-    { y: 0.58, amp: 160, scale: 0.0016, colour: `rgba(15, 23, 42, ${0.38 + light * 0.22})` }
-  ];
-
-  for (const layer of layers) {
-    ctx.beginPath();
-    ctx.moveTo(0, view.h);
-
-    const parallaxX = state.camera.x * CONFIG.world.horizonParallax;
-    const baseY = view.h * layer.y;
-
-    ctx.lineTo(0, baseY);
-
-    for (let x = 0; x <= view.w + 80; x += 80) {
-      const n = fractalNoise((x + parallaxX) * layer.scale, layer.y * 10);
-      const y = baseY - n * layer.amp;
-      ctx.lineTo(x, y);
-    }
-
-    ctx.lineTo(view.w, view.h);
-    ctx.closePath();
-
-    ctx.fillStyle = layer.colour;
-    ctx.fill();
-  }
-}
-
-function drawStrangeLights() {
-  if (!state.weather.strangeLight) return;
-
-  ctx.save();
-
-  const t = performance.now() * 0.0002;
-
-  for (let i = 0; i < 4; i++) {
-    const x = (noise2(i * 100 + t, i * 20) * view.w);
-    const y = view.h * (0.22 + noise2(i * 50, t) * 0.26);
-
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, 80);
-
-    glow.addColorStop(0, "rgba(125,211,252,0.42)");
-    glow.addColorStop(1, "rgba(125,211,252,0)");
-
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, 80, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function drawTerrain() {
-  const chunks = getVisibleChunks();
-  const size = CONFIG.world.chunkSize;
-  const light = getLightLevel();
-
-  for (const chunk of chunks) {
-    const wx = chunk.x * size;
-    const wy = chunk.y * size;
-    const s = worldToScreen(wx, wy);
-
-    const type = getTerrainAt(wx + size / 2, wy + size / 2);
-    const localLight = hash2(chunk.x, chunk.y) > 0.5 ? light : light * 0.72;
-
-    ctx.fillStyle = terrainColour(type, localLight);
-
-    ctx.beginPath();
-
-    const wobble = 46;
-    const p1 = { x: s.x + hash2(chunk.x, chunk.y) * wobble, y: s.y };
-    const p2 = { x: s.x + size, y: s.y + hash2(chunk.x + 1, chunk.y) * wobble };
-    const p3 = { x: s.x + size - hash2(chunk.x, chunk.y + 1) * wobble, y: s.y + size };
-    const p4 = { x: s.x, y: s.y + size - hash2(chunk.x - 1, chunk.y) * wobble };
-
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.lineTo(p3.x, p3.y);
-    ctx.lineTo(p4.x, p4.y);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = `rgba(255,255,255,${0.025 + light * 0.025})`;
-    ctx.stroke();
-  }
-}
-
-function drawLandmarkShape(lm, s, discovered) {
-  const scale = lm.scale || 1;
-
-  ctx.save();
-  ctx.translate(s.x, s.y);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = discovered ? 0.35 : 1;
-
-  if (lm.type === "beacon") {
-    ctx.fillStyle = "#67e8f9";
-    ctx.beginPath();
-    ctx.arc(0, -18, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#67e8f9";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, -18);
-    ctx.lineTo(0, 18);
-    ctx.stroke();
-  }
-
-  if (lm.type === "tower") {
-    ctx.fillStyle = "#fda4af";
-    ctx.beginPath();
-    ctx.moveTo(0, -58);
-    ctx.lineTo(-16, 18);
-    ctx.lineTo(16, 18);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(-6, -34, 12, 18);
-  }
-
-  if (lm.type === "ruin") {
-    ctx.fillStyle = "#d8b4fe";
-    ctx.fillRect(-22, -32, 9, 34);
-    ctx.fillRect(8, -44, 10, 46);
-    ctx.fillRect(-26, -36, 50, 7);
-  }
-
-  if (lm.type === "camp") {
-    ctx.fillStyle = "#fb7185";
-    ctx.beginPath();
-    ctx.moveTo(0, -30);
-    ctx.lineTo(-21, 12);
-    ctx.lineTo(21, 12);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#fbbf24";
-    ctx.beginPath();
-    ctx.arc(0, 20, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  if (lm.type === "stone") {
-    ctx.fillStyle = "#cbd5e1";
-    ctx.beginPath();
-    ctx.moveTo(0, -36);
-    ctx.lineTo(-18, 14);
-    ctx.lineTo(20, 10);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  if (lm.type === "arch") {
-    ctx.strokeStyle = "#fef3c7";
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.arc(0, 8, 34, Math.PI, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#fef3c7";
-    ctx.fillRect(-40, 4, 10, 44);
-    ctx.fillRect(30, 4, 10, 44);
-  }
-
-  if (lm.type === "observatory") {
-    ctx.fillStyle = "#bae6fd";
-    ctx.beginPath();
-    ctx.arc(0, -20, 28, Math.PI, 0);
-    ctx.fill();
-
-    ctx.fillRect(-34, -20, 68, 18);
-
-    ctx.fillStyle = "#111827";
-    ctx.beginPath();
-    ctx.arc(0, -24, 8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  if (lm.type === "cable") {
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(-54, -46);
-    ctx.lineTo(54, -16);
-    ctx.stroke();
-
-    ctx.fillStyle = "#e5e7eb";
-    ctx.fillRect(-48, -14, 14, 42);
-    ctx.fillRect(34, 0, 14, 32);
-  }
-
-  ctx.restore();
-}
-
-function drawLandmarks() {
-  const chunks = getVisibleChunks();
-
-  for (const chunk of chunks) {
-    const landmarks = getLandmarksInChunk(chunk.x, chunk.y);
-
-    for (const lm of landmarks) {
-      const s = worldToScreen(lm.x, lm.y);
-      const discovered = state.discovered.has(lm.id);
-      const distanceToPlayer = dist(state.player.x, state.player.y, lm.x, lm.y);
-
-      if (
-        s.x < -300 ||
-        s.x > view.w + 300 ||
-        s.y < -300 ||
-        s.y > view.h + 300
-      ) continue;
-
-      ctx.save();
-
-      if (lm.mega && distanceToPlayer < CONFIG.landmarks.megaVisibility) {
-        const glow = clamp(1 - distanceToPlayer / CONFIG.landmarks.megaVisibility, 0, 1);
-
-        ctx.globalAlpha = discovered ? 0.16 : 0.22 + glow * 0.26;
-        ctx.fillStyle = lm.type === "observatory" ? "#7dd3fc" : "#fb7185";
-
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y - 220 * lm.scale);
-        ctx.lineTo(s.x - 18, s.y + 40);
-        ctx.lineTo(s.x + 18, s.y + 40);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      if (lm.type === "beacon" || lm.type === "tower" || lm.mega) {
-        const pulse = Math.sin(performance.now() * 0.004 + lm.x) * 0.5 + 0.5;
-
-        ctx.globalAlpha = discovered ? 0.18 : 0.54;
-        ctx.strokeStyle = lm.mega ? "#fda4af" : "#67e8f9";
-        ctx.lineWidth = lm.mega ? 3 : 2;
-
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y - (120 + pulse * 60) * (lm.scale || 1));
-        ctx.lineTo(s.x, s.y - 18);
-        ctx.stroke();
-      }
-
-      drawLandmarkShape(lm, s, discovered);
-
-      if (distanceToPlayer < 180 && !discovered) {
-        ctx.globalAlpha = 0.72;
-        ctx.fillStyle = "rgba(255,255,255,0.88)";
-        ctx.font = "12px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText(lm.name, s.x, s.y - 70 * (lm.scale || 1));
-      }
-
-      ctx.restore();
-    }
-  }
-}
-function drawTraversalRings() {
-  const chunks = getVisibleChunks();
-  const t = performance.now() * 0.003;
-
-  for (const chunk of chunks) {
-    const rings = getTraversalRingsInChunk(chunk.x, chunk.y);
-
-    for (const ring of rings) {
-      const s = worldToScreen(ring.x, ring.y);
-      const completed = state.traversal.ringsCompleted.has(ring.id);
-
-      if (s.x < -80 || s.x > view.w + 80 || s.y < -80 || s.y > view.h + 80) continue;
-
-      ctx.save();
-      ctx.globalAlpha = completed ? 0.12 : 0.55 + Math.sin(t + ring.x) * 0.12;
-      ctx.strokeStyle = ring.type === "glide-ring"
-        ? "#bae6fd"
-        : ring.type === "ridge-ring"
-          ? "#fda4af"
-          : "#fde68a";
-
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, CONFIG.traversal.ringRadius + Math.sin(t + ring.y) * 3, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.globalAlpha *= 0.45;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.fill();
-
-      ctx.restore();
-    }
-  }
-}
-
-function drawTraversalMessage() {
-  if (state.traversal.ringMessageTimer <= 0) return;
-
-  const alpha = clamp(state.traversal.ringMessageTimer / 2.8, 0, 1);
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "rgba(255,255,255,0.86)";
-  ctx.font = "12px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText(state.traversal.ringMessage.toUpperCase(), view.cx, view.h - 96);
-  ctx.restore();
-}
-
-function drawPlayer() {
-  const p = worldToScreen(state.player.x, state.player.y);
-
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(state.player.facing + Math.PI / 2);
-
-  ctx.fillStyle = "#111827";
-  ctx.beginPath();
-  ctx.moveTo(0, -18);
-  ctx.lineTo(-11, 14);
-  ctx.lineTo(0, 8);
-  ctx.lineTo(11, 14);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#f97316";
-  ctx.globalAlpha = 0.9;
-  ctx.beginPath();
-  ctx.moveTo(0, 12);
-  ctx.lineTo(-8, 26);
-  ctx.lineTo(8, 26);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = "#000";
-  ctx.beginPath();
-  ctx.ellipse(p.x, p.y + 18, 18, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawMovementTrail() {
-  const velocity = Math.hypot(state.player.vx, state.player.vy);
-  if (velocity < 80) return;
-
-  const p = worldToScreen(state.player.x, state.player.y);
-  const alpha = clamp((velocity - 80) / 180, 0, 0.28);
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = "#e0f2fe";
-  ctx.lineWidth = 2;
-
-  const backX = Math.cos(state.player.facing + Math.PI) * 34;
-  const backY = Math.sin(state.player.facing + Math.PI) * 34;
-
-  ctx.beginPath();
-  ctx.moveTo(p.x + backX, p.y + backY);
-  ctx.lineTo(p.x + backX * 2.3, p.y + backY * 2.3);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawAtmosphere() {
-  const light = getLightLevel();
-  const weather = getWeatherProfile(state.weather.current);
-
-  ctx.save();
-
-  ctx.globalAlpha = (1 - light) * 0.7;
-  ctx.fillStyle = "rgba(7, 10, 22, 0.52)";
-  ctx.fillRect(0, 0, view.w, view.h);
-
-  ctx.restore();
-
-  const fogStrength = weather.fog;
-
-  const fog = ctx.createRadialGradient(
-    view.cx,
-    view.cy,
-    view.h * 0.08,
-    view.cx,
-    view.cy,
-    view.h * (0.65 + fogStrength)
-  );
-
-  fog.addColorStop(0, "rgba(255,255,255,0)");
-  fog.addColorStop(1, `rgba(255,255,255,${0.10 + fogStrength * 0.22})`);
-
-  ctx.fillStyle = fog;
-  ctx.fillRect(0, 0, view.w, view.h);
-
-  if (state.weather.current === "mist") {
-    ctx.fillStyle = "rgba(220,230,255,0.08)";
-    ctx.fillRect(0, 0, view.w, view.h);
-  }
-
-  if (state.weather.current === "snow") {
-    ctx.fillStyle = "rgba(235,240,255,0.08)";
-    ctx.fillRect(0, 0, view.w, view.h);
-  }
-
-  if (state.weather.current === "rain") {
-    ctx.fillStyle = "rgba(80,100,140,0.10)";
-    ctx.fillRect(0, 0, view.w, view.h);
-  }
-}
-
-function initParticles() {
-  state.particles = [];
-
-  for (let i = 0; i < CONFIG.weather.particleCount; i++) {
-    state.particles.push({
-      x: Math.random() * view.w,
-      y: Math.random() * view.h,
-      size: 1 + Math.random() * 3,
-      speed: 20 + Math.random() * 80,
-      drift: -40 + Math.random() * 80,
-      alpha: 0.06 + Math.random() * 0.22
-    });
-  }
-}
-
-function drawParticles(dt) {
-  const weather = getWeatherProfile(state.weather.current);
-
-  if (!weather.particles) return;
-
-  ctx.save();
-
-  for (const p of state.particles) {
-    p.x += p.drift * weather.wind * dt;
-    p.y += p.speed * dt;
-
-    if (p.y > view.h + 20) {
-      p.y = -20;
-      p.x = Math.random() * view.w;
-    }
-
-    if (p.x < -40) p.x = view.w + 40;
-    if (p.x > view.w + 40) p.x = -40;
-
-    ctx.globalAlpha = p.alpha;
-
-    if (state.weather.current === "rain") {
-      ctx.strokeStyle = "rgba(180,220,255,0.5)";
-      ctx.lineWidth = 1;
-
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x - 4, p.y + 12);
-      ctx.stroke();
+const PlayerSystem = {
+  spawn() {
+    STATE.player.x = CONFIG.player.spawnX;
+    STATE.player.y = CONFIG.player.spawnY;
+    STATE.player.vx = 0;
+    STATE.player.vy = 0;
+  },
+
+  update(dt) {
+    this.applyInput(dt);
+    this.applyTerrainForces(dt);
+    this.applyStamina(dt);
+  },
+
+  applyInput(dt) {
+    const move = InputSystem.getMoveVector();
+    const profile = TerrainSystem.getProfileAt(STATE.player.x, STATE.player.y);
+
+    const sprinting =
+      InputSystem.isDown("ShiftLeft") ||
+      InputSystem.isDown("ShiftRight");
+
+    const canSprint = sprinting && STATE.player.stamina > 2 && move.active;
+    const baseSpeed = canSprint ? CONFIG.player.sprintSpeed : CONFIG.player.walkSpeed;
+
+    const targetVx = move.x * baseSpeed * profile.speed;
+    const targetVy = move.y * baseSpeed * profile.speed;
+
+    if (move.active) {
+      STATE.player.vx = Utils.lerp(
+        STATE.player.vx,
+        targetVx,
+        CONFIG.player.acceleration * profile.acceleration * dt
+      );
+
+      STATE.player.vy = Utils.lerp(
+        STATE.player.vy,
+        targetVy,
+        CONFIG.player.acceleration * profile.acceleration * dt
+      );
     } else {
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      STATE.player.vx = Utils.lerp(
+        STATE.player.vx,
+        0,
+        profile.friction * dt
+      );
+
+      STATE.player.vy = Utils.lerp(
+        STATE.player.vy,
+        0,
+        profile.friction * dt
+      );
     }
-  }
 
-  ctx.restore();
-}
+    const speed = Math.hypot(STATE.player.vx, STATE.player.vy);
 
-function drawDiscoveryNotification() {
-  if (state.notification.timer <= 0) return;
-
-  const alpha = clamp(state.notification.timer / CONFIG.discovery.notificationSeconds, 0, 1);
-
-  ctx.save();
-  ctx.globalAlpha = Math.min(1, alpha * 1.3);
-
-  const boxW = Math.min(420, view.w - 40);
-  const boxH = 58;
-  const x = view.cx - boxW / 2;
-  const y = 86;
-
-  ctx.fillStyle = "rgba(12,18,30,0.62)";
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 1;
-
-  roundRect(x, y, boxW, boxH, 18);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = "13px system-ui";
-  ctx.textAlign = "center";
-  ctx.letterSpacing = "2px";
-  ctx.fillText(state.notification.text.toUpperCase(), view.cx, y + 35);
-
-  ctx.restore();
-}
-
-function drawDiscoveryLog() {
-  if (!state.showLog) return;
-
-  ctx.save();
-
-  const panelW = Math.min(520, view.w - 36);
-  const panelH = Math.min(520, view.h - 80);
-  const x = view.cx - panelW / 2;
-  const y = view.cy - panelH / 2;
-
-  ctx.fillStyle = "rgba(8,13,24,0.84)";
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-
-  roundRect(x, y, panelW, panelH, 26);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.font = "18px system-ui";
-  ctx.textAlign = "left";
-  ctx.fillText("Discovery Log", x + 26, y + 42);
-
-  ctx.fillStyle = "rgba(255,255,255,0.52)";
-  ctx.font = "12px system-ui";
-  ctx.fillText("Press L to close", x + 26, y + 66);
-
-  const entries = state.discoveryLog.slice(0, 10);
-
-  if (!entries.length) {
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    ctx.font = "14px system-ui";
-    ctx.fillText("No places recorded yet.", x + 26, y + 112);
-  }
-
-  entries.forEach((entry, i) => {
-    const rowY = y + 112 + i * 36;
-
-    ctx.fillStyle = "rgba(255,255,255,0.88)";
-    ctx.font = "14px system-ui";
-    ctx.fillText(entry.name, x + 26, rowY);
-
-    ctx.fillStyle = "rgba(255,255,255,0.44)";
-    ctx.font = "11px system-ui";
-    ctx.fillText(`${entry.type.toUpperCase()} · DAY ${entry.day} · ${entry.km}KM`, x + 26, rowY + 17);
-  });
-
-  ctx.restore();
-}
-
-function drawWorldMap() {
-  if (!state.showMap) return;
-
-  ctx.save();
-
-  const panelW = Math.min(560, view.w - 36);
-  const panelH = Math.min(560, view.h - 80);
-  const x = view.cx - panelW / 2;
-  const y = view.cy - panelH / 2;
-
-  roundRect(x, y, panelW, panelH, 26);
-  ctx.fillStyle = "rgba(8,13,24,0.86)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.font = "18px system-ui";
-  ctx.textAlign = "left";
-  ctx.fillText("World Map", x + 26, y + 42);
-
-  ctx.fillStyle = "rgba(255,255,255,0.52)";
-  ctx.font = "12px system-ui";
-  ctx.fillText("Press M to close · explored chunks persist", x + 26, y + 66);
-
-  const mapX = x + 38;
-  const mapY = y + 96;
-  const mapW = panelW - 76;
-  const mapH = panelH - 130;
-  const cell = 10;
-
-  ctx.fillStyle = "rgba(255,255,255,0.05)";
-  roundRect(mapX, mapY, mapW, mapH, 18);
-  ctx.fill();
-
-  const size = CONFIG.world.chunkSize;
-  const pcx = Math.floor(state.player.x / size);
-  const pcy = Math.floor(state.player.y / size);
-
-  for (let gy = -18; gy <= 18; gy++) {
-    for (let gx = -22; gx <= 22; gx++) {
-      const cx = pcx + gx;
-      const cy = pcy + gy;
-      const key = getChunkKey(cx, cy);
-      const visited = state.visitedChunks.has(key);
-
-      const px = mapX + mapW / 2 + gx * cell;
-      const py = mapY + mapH / 2 + gy * cell;
-
-      if (px < mapX + 10 || px > mapX + mapW - 10 || py < mapY + 10 || py > mapY + mapH - 10) continue;
-
-      if (visited) {
-        const terrain = getTerrainAt(cx * size + size / 2, cy * size + size / 2);
-        ctx.fillStyle = terrainColour(terrain, 0.8);
-        ctx.globalAlpha = 0.76;
-        ctx.fillRect(px, py, cell - 2, cell - 2);
-      } else {
-        ctx.fillStyle = "rgba(255,255,255,0.05)";
-        ctx.globalAlpha = 1;
-        ctx.fillRect(px, py, cell - 3, cell - 3);
-      }
+    if (speed > CONFIG.player.maxVelocity) {
+      const scale = CONFIG.player.maxVelocity / speed;
+      STATE.player.vx *= scale;
+      STATE.player.vy *= scale;
     }
-  }
 
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "#fb7185";
-  ctx.beginPath();
-  ctx.arc(mapX + mapW / 2, mapY + mapH / 2, 5, 0, Math.PI * 2);
-  ctx.fill();
+    const oldX = STATE.player.x;
+    const oldY = STATE.player.y;
 
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "12px system-ui";
-  ctx.fillText(`${state.visitedChunks.size} sectors mapped`, x + 26, y + panelH - 28);
+    STATE.player.x += STATE.player.vx * dt;
+    STATE.player.y += STATE.player.vy * dt;
 
-  ctx.restore();
-}
+    STATE.world.distanceTravelled += Utils.dist(
+      oldX,
+      oldY,
+      STATE.player.x,
+      STATE.player.y
+    );
 
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+    if (speed > 4) {
+      STATE.player.facing = Math.atan2(STATE.player.vy, STATE.player.vx);
+    }
+
+    STATE.player.currentTerrain = TerrainSystem.getTerrainAt(
+      STATE.player.x,
+      STATE.player.y
+    );
+
+    STATE.player.currentTerrainLabel =
+      TerrainSystem.getProfileAt(STATE.player.x, STATE.player.y).label;
+  },
+
+  applyTerrainForces(dt) {
+    const terrain = TerrainSystem.getTerrainAt(STATE.player.x, STATE.player.y);
+    const slope = TerrainSystem.getSlopeAt(STATE.player.x, STATE.player.y);
+
+    if (terrain === "snow" || terrain === "rock") {
+      const assist = terrain === "snow" ? 34 : 22;
+      STATE.player.vx += slope.x * assist * dt;
+      STATE.player.vy += slope.y * assist * dt;
+    }
+
+    if (terrain === "water") {
+      STATE.player.vx *= 1 - 0.8 * dt;
+      STATE.player.vy *= 1 - 0.8 * dt;
+    }
+  },
+
+  applyStamina(dt) {
+    const moving = Math.hypot(STATE.player.vx, STATE.player.vy) > 5;
+    const sprinting =
+      InputSystem.isDown("ShiftLeft") ||
+      InputSystem.isDown("ShiftRight");
+
+    const cost = TerrainSystem.getTraversalCostAt(STATE.player.x, STATE.player.y);
+
+    if (sprinting && moving) {
+      STATE.player.stamina -= (CONFIG.player.staminaDrain + cost) * dt;
+    } else if (moving && cost > 0.7) {
+      STATE.player.stamina -= cost * dt;
+    } else {
+      STATE.player.stamina += CONFIG.player.staminaRecover * dt;
+    }
+
+    STATE.player.stamina = Utils.clamp(STATE.player.stamina, 0, 100);
+  },
+
+  render() {}
+};
 
 /* =========================================================
-   13. HUD UPDATE
+   14. TRAVERSAL SYSTEM
 ========================================================= */
 
-function updateHUD() {
-  const hour = getHour();
-  const h = Math.floor(hour);
-  const m = Math.floor((hour - h) * 60);
+const TraversalSystem = {
+  getRingRadius() {
+    return CONFIG.traversal.ringRadius || 34;
+  },
 
-  clockText.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  dayText.textContent = `DAY ${state.time.day}`;
+  update(dt) {
+    const ring = PuzzleSystem.getNearbyTraversalRing();
 
-  energyBar.style.width = `${state.player.energy}%`;
-  staminaBar.style.width = `${state.player.stamina}%`;
-  focusBar.style.width = `${state.player.focus}%`;
+    if (ring && !this.hasCompletedRing(ring.id)) {
+      const speed = Math.hypot(STATE.player.vx, STATE.player.vy);
+      const needsSpeed = ring.type === "glide-ring" || ring.type === "ridge-ring";
 
-  distanceText.textContent = `${(state.distanceTravelled / 1000).toFixed(1)} KM WALKED`;
+      if (!needsSpeed || speed > 110) {
+        this.completeRing(ring);
+      }
+    }
 
-  regionName.textContent = getRegionName();
-}
+    if (STATE.traversal.messageTimer > 0) {
+      STATE.traversal.messageTimer -= dt;
+    }
+  },
 
-function updateMovementHUD() {
-  const terrain = getTerrainProfile(state.player.lastTerrain);
-  const speed = Math.round(Math.hypot(state.player.vx, state.player.vy));
+  hasCompletedRing(id) {
+    return STATE.traversal.ringsCompleted?.has(id);
+  },
 
-  const action = getTerrainAction(state.player.lastTerrain).toUpperCase();
-distanceText.textContent = `${(state.distanceTravelled / 1000).toFixed(1)} KM · ${speed} M/S · ${terrain.label} · ${action}`;
-}
+  completeRing(ring) {
+    if (!STATE.traversal.ringsCompleted) {
+      STATE.traversal.ringsCompleted = new Set();
+    }
 
-function updateWeatherHUD() {
-  const weatherName = state.weather.current.toUpperCase();
+    STATE.traversal.ringsCompleted.add(ring.id);
 
-  if (state.weather.strangeLight) {
-    regionName.textContent = `${getRegionName()} · STRANGE LIGHTS`;
-  } else {
-    regionName.textContent = `${getRegionName()} · ${weatherName}`;
-  }
-}
+    STATE.player.focus = Utils.clamp(STATE.player.focus + 6, 0, 100);
+    STATE.player.stamina = Utils.clamp(STATE.player.stamina + 10, 0, 100);
+
+    STATE.traversal.message =
+      ring.type === "glide-ring"
+        ? "Glide line found"
+        : ring.type === "ridge-ring"
+          ? "Ridge route mastered"
+          : "Path marker crossed";
+
+    STATE.traversal.messageTimer = 2.8;
+    SaveSystem.save();
+  },
+
+  climb() {},
+  slide() {},
+  glide() {},
+  dash() {},
+  wallRun() {},
+  ridgeRun() {},
+  detectTraversalOpportunity() {}
+};
 
 /* =========================================================
-   14. MAIN LOOP
+   15. TRAVERSAL PUZZLE SYSTEM
+========================================================= */
+
+const PuzzleSystem = {
+  update() {},
+
+  generatePuzzle() {},
+
+  getTraversalRingsInChunk(cx, cy) {
+    const items = [];
+    const roll = Utils.noise2D(cx - 31, cy + 47);
+
+    if (roll < 0.82) return items;
+
+    const size = CONFIG.world.chunkSize;
+    const x = cx * size + Utils.noise2D(cx + 91, cy - 14) * size;
+    const y = cy * size + Utils.noise2D(cx - 22, cy + 83) * size;
+
+    const terrain = TerrainSystem.getTerrainAt(x, y);
+    const altitude = TerrainSystem.getHeightAt(x, y);
+
+    if (terrain === "water") return items;
+
+    const type =
+      altitude > 0.68
+        ? "ridge-ring"
+        : terrain === "snow"
+          ? "glide-ring"
+          : "path-ring";
+
+    const id = `ring:${type}:${cx}:${cy}`;
+
+    items.push({
+      id,
+      type,
+      x,
+      y,
+      terrain,
+      completed: STATE.traversal.ringsCompleted?.has(id)
+    });
+
+    return items;
+  },
+
+  getNearbyTraversalRing() {
+    const chunks = ChunkSystem.getVisibleChunks();
+
+    for (const chunk of chunks) {
+      const rings = this.getTraversalRingsInChunk(chunk.cx, chunk.cy);
+
+      for (const ring of rings) {
+        if (STATE.traversal.ringsCompleted?.has(ring.id)) continue;
+
+        const d = Utils.dist(STATE.player.x, STATE.player.y, ring.x, ring.y);
+
+        if (d <= TraversalSystem.getRingRadius()) {
+          return ring;
+        }
+      }
+    }
+
+    return null;
+  },
+
+  checkPuzzleCompletion() {},
+  renderPuzzleObjects() {},
+  rewardPlayer() {}
+};
+
+/* =========================================================
+   16. LANDMARK SYSTEM
+========================================================= */
+
+const LandmarkSystem = {
+  types: ["beacon", "ruin", "camp", "stone", "tower"],
+
+  megaTypes: ["arch", "observatory", "cable", "tower"],
+
+  getLandmarkName(type, cx, cy) {
+    const prefixes = {
+      beacon: ["Old", "Silent", "Amber", "North", "Fallen"],
+      ruin: ["Broken", "Grey", "Hollow", "Sunken", "Forgotten"],
+      camp: ["Last", "Cold", "Low", "Ash", "Wanderer's"],
+      stone: ["White", "Black", "Split", "Ancient", "Glass"],
+      tower: ["Signal", "Watch", "Storm", "Pale", "Far"],
+      arch: ["Giant", "Dawn", "Weathered", "Twin", "High"],
+      observatory: ["Moon", "Star", "Upper", "Cloud", "Final"],
+      cable: ["Old", "Rust", "Eastern", "Broken", "High"]
+    };
+
+    const nouns = {
+      beacon: ["Beacon", "Light", "Marker", "Signal", "Flare"],
+      ruin: ["Ruin", "Gatehouse", "Shelter", "Station", "Steps"],
+      camp: ["Camp", "Outpost", "Fireplace", "Rest", "Tent"],
+      stone: ["Stone", "Monolith", "Marker", "Pillar", "Shard"],
+      tower: ["Tower", "Relay", "Spire", "Needle", "Watch"],
+      arch: ["Arch", "Pass", "Crown", "Span", "Gate"],
+      observatory: ["Observatory", "Lens", "Dome", "Eye", "Platform"],
+      cable: ["Cableway", "Lift", "Line", "Crossing", "Gantry"]
+    };
+
+    const p = prefixes[type] || prefixes.stone;
+    const n = nouns[type] || nouns.stone;
+
+    const a = p[Math.floor(Utils.noise2D(cx + 4, cy - 9) * p.length)];
+    const b = n[Math.floor(Utils.noise2D(cx - 6, cy + 13) * n.length)];
+
+    return `${a} ${b}`;
+  },
+
+  generateLandmarksForChunk(cx, cy) {
+    const items = [];
+    const size = CONFIG.world.chunkSize;
+    const roll = Utils.noise2D(cx, cy);
+
+    if (roll > 0.72) {
+      const type = this.types[Math.floor(Utils.noise2D(cx + 1, cy + 1) * this.types.length)];
+      const id = `${type}:${cx}:${cy}`;
+
+      items.push({
+        id,
+        type,
+        name: this.getLandmarkName(type, cx, cy),
+        x: cx * size + Utils.noise2D(cx + 13, cy - 7) * size,
+        y: cy * size + Utils.noise2D(cx - 4, cy + 19) * size,
+        scale: 1,
+        mega: false
+      });
+    }
+
+    const megaRoll = Utils.noise2D(cx * 3, cy * 3);
+
+    if (megaRoll > 0.955) {
+      const type = this.megaTypes[Math.floor(Utils.noise2D(cx + 17, cy - 11) * this.megaTypes.length)];
+      const id = `mega:${type}:${cx}:${cy}`;
+
+      items.push({
+        id,
+        type,
+        name: this.getLandmarkName(type, cx, cy),
+        x: cx * size + size * 0.5,
+        y: cy * size + size * 0.5,
+        scale: 2.5 + Utils.noise2D(cx - 2, cy + 8) * 1.6,
+        mega: true
+      });
+    }
+
+    return items;
+  },
+
+  getNearbyLandmark() {
+    const chunks = ChunkSystem.getVisibleChunks();
+    const radius = CONFIG.discovery.interactionRadius || 82;
+
+    for (const chunk of chunks) {
+      const landmarks = this.generateLandmarksForChunk(chunk.cx, chunk.cy);
+
+      for (const lm of landmarks) {
+        if (DiscoverySystem.hasDiscovered(lm.id)) continue;
+
+        const d = Utils.dist(STATE.player.x, STATE.player.y, lm.x, lm.y);
+
+        if (d <= radius) {
+          return lm;
+        }
+      }
+    }
+
+    return null;
+  },
+
+  update(dt) {
+    const nearby = this.getNearbyLandmark();
+
+    STATE.landmarks.nearby = nearby || null;
+
+    if (nearby && InputSystem.consumePress("KeyE")) {
+      this.activateLandmark(nearby);
+    }
+  },
+
+  activateLandmark(lm) {
+    DiscoverySystem.discover(lm);
+  },
+
+  renderLandmarks() {},
+  renderMegaLandmarks() {}
+};
+
+/* =========================================================
+   17. DISCOVERY SYSTEM
+========================================================= */
+
+const DiscoverySystem = {
+  log: [],
+
+  ensureState() {
+    if (!STATE.discovery.discovered) STATE.discovery.discovered = new Set();
+    if (!STATE.discovery.log) STATE.discovery.log = [];
+  },
+
+  update(dt) {
+    this.ensureState();
+
+    if (STATE.discovery.notificationTimer > 0) {
+      STATE.discovery.notificationTimer -= dt;
+    }
+
+    if (InputSystem.consumePress("KeyL")) {
+      STATE.discovery.showLog = !STATE.discovery.showLog;
+    }
+  },
+
+  discover(lm) {
+    this.ensureState();
+
+    if (STATE.discovery.discovered.has(lm.id)) return;
+
+    STATE.discovery.discovered.add(lm.id);
+
+    const entry = {
+      id: lm.id,
+      name: lm.name,
+      type: lm.type,
+      x: Math.round(lm.x),
+      y: Math.round(lm.y),
+      day: STATE.time.day,
+      km: Number((STATE.world.distanceTravelled / 1000).toFixed(1))
+    };
+
+    STATE.discovery.log.unshift(entry);
+    STATE.discovery.log = STATE.discovery.log.slice(0, 100);
+
+    STATE.discovery.notification = `Discovered: ${lm.name}`;
+    STATE.discovery.notificationTimer = 4;
+
+    STATE.player.focus = Utils.clamp(STATE.player.focus + (lm.mega ? 16 : 8), 0, 100);
+
+    SaveSystem.save();
+  },
+
+  hasDiscovered(id) {
+    this.ensureState();
+    return STATE.discovery.discovered.has(id);
+  },
+
+  renderNotification() {},
+  renderDiscoveryLog() {}
+};
+
+/* =========================================================
+   18. MAP / FOG OF WAR SYSTEM
+========================================================= */
+
+const MapSystem = {
+  visitedChunks: new Set(),
+
+  ensureState() {
+    if (!STATE.map.visitedChunks) STATE.map.visitedChunks = new Set();
+  },
+
+  update() {
+    this.ensureState();
+    this.markVisited();
+
+    if (InputSystem.consumePress("KeyM")) {
+      STATE.map.showMap = !STATE.map.showMap;
+    }
+  },
+
+  markVisited() {
+    const coords = ChunkSystem.getChunkCoords(STATE.player.x, STATE.player.y);
+    const key = ChunkSystem.getChunkKey(coords.x, coords.y);
+    STATE.map.visitedChunks.add(key);
+  },
+
+  renderWorldMap() {},
+  renderMiniMap() {},
+
+  calculateCompletion() {
+    return STATE.map.visitedChunks?.size || 0;
+  }
+};
+
+/* =========================================================
+   19. DYNAMIC HORIZON EVENT SYSTEM
+========================================================= */
+
+const HorizonEventSystem = {
+  activeEvents: [],
+
+  update(dt) {
+    if (!STATE.world.eventTimer) STATE.world.eventTimer = 0;
+    STATE.world.eventTimer += dt;
+
+    if (STATE.world.eventTimer > 55) {
+      STATE.world.eventTimer = 0;
+      this.spawnEvent();
+    }
+
+    this.activeEvents = this.activeEvents.filter(event => {
+      event.life -= dt;
+      return event.life > 0;
+    });
+  },
+
+  spawnEvent() {
+    if (this.activeEvents.length >= 3) return;
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 1800 + Math.random() * 2800;
+
+    const types = ["distant-light", "meteor", "signal-pulse", "aurora"];
+    const type = types[Math.floor(Math.random() * types.length)];
+
+    this.activeEvents.push({
+      id: `event:${Date.now()}:${Math.random()}`,
+      type,
+      x: STATE.player.x + Math.cos(angle) * distance,
+      y: STATE.player.y + Math.sin(angle) * distance,
+      life: 30 + Math.random() * 40,
+      age: 0,
+      discovered: false
+    });
+
+    UISystem.showToast("Something moved on the horizon");
+  },
+
+  resolveEvent(event) {
+    if (!event || event.discovered) return;
+
+    event.discovered = true;
+    STATE.player.focus = Utils.clamp(STATE.player.focus + 4, 0, 100);
+    ProgressionSystem.grantMilestone("horizon-witness");
+  },
+
+  renderDistantEvents() {}
+};
+
+/* =========================================================
+   20. RELIC / COLLECTIBLE SYSTEM
+========================================================= */
+
+const RelicSystem = {
+  relics: [],
+
+  update(dt) {
+    if (!STATE.relics) STATE.relics = { collected: [] };
+
+    const nearby = this.getNearbyRelic();
+
+    if (nearby && InputSystem.consumePress("KeyF")) {
+      this.collectRelic(nearby);
+    }
+  },
+
+  generateRelic(cx, cy) {
+    const roll = Utils.noise2D(cx + 400, cy - 170);
+
+    if (roll < 0.965) return null;
+
+    const size = CONFIG.world.chunkSize;
+    const types = ["map-fragment", "signal-core", "old-token", "glass-shard"];
+    const type = types[Math.floor(Utils.noise2D(cx - 13, cy + 91) * types.length)];
+
+    return {
+      id: `relic:${type}:${cx}:${cy}`,
+      type,
+      name: this.getRelicName(type),
+      x: cx * size + Utils.noise2D(cx + 31, cy + 7) * size,
+      y: cy * size + Utils.noise2D(cx - 21, cy - 12) * size
+    };
+  },
+
+  getRelicName(type) {
+    const names = {
+      "map-fragment": "Weathered Map Fragment",
+      "signal-core": "Dormant Signal Core",
+      "old-token": "Nomad Token",
+      "glass-shard": "Blue Glass Shard"
+    };
+
+    return names[type] || "Unknown Relic";
+  },
+
+  getNearbyRelic() {
+    const chunks = ChunkSystem.getVisibleChunks();
+
+    for (const chunk of chunks) {
+      const relic = this.generateRelic(chunk.cx, chunk.cy);
+      if (!relic) continue;
+
+      if (STATE.relics?.collected?.includes(relic.id)) continue;
+
+      const d = Utils.dist(STATE.player.x, STATE.player.y, relic.x, relic.y);
+      if (d < 52) return relic;
+    }
+
+    return null;
+  },
+
+  collectRelic(relic) {
+    if (!STATE.relics) STATE.relics = { collected: [] };
+    if (STATE.relics.collected.includes(relic.id)) return;
+
+    STATE.relics.collected.push(relic.id);
+    STATE.player.focus = Utils.clamp(STATE.player.focus + 10, 0, 100);
+
+    UISystem.showToast(`Relic found: ${relic.name}`);
+    ProgressionSystem.grantMilestone("first-relic");
+    SaveSystem.save();
+  },
+
+  renderRelics() {},
+  renderRelicJournal() {}
+};
+
+/* =========================================================
+   21. PROGRESSION / UNLOCK SYSTEM
+========================================================= */
+
+const ProgressionSystem = {
+  update() {
+    const km = STATE.world.distanceTravelled / 1000;
+
+    if (km >= 1) this.grantMilestone("walked-1km");
+    if (km >= 5) this.grantMilestone("walked-5km");
+    if ((STATE.discovery.log?.length || 0) >= 5) this.grantMilestone("five-discoveries");
+    if ((STATE.map.visitedChunks?.size || 0) >= 25) this.grantMilestone("mapped-25-sectors");
+  },
+
+  ensureState() {
+    if (!STATE.progression.milestones) STATE.progression.milestones = [];
+    if (!STATE.progression.unlocks) STATE.progression.unlocks = [];
+  },
+
+  grantMilestone(id) {
+    this.ensureState();
+
+    if (STATE.progression.milestones.includes(id)) return;
+
+    STATE.progression.milestones.push(id);
+    UISystem.showToast(`Milestone: ${this.getMilestoneLabel(id)}`);
+    SaveSystem.save();
+  },
+
+  getMilestoneLabel(id) {
+    const labels = {
+      "walked-1km": "First kilometre",
+      "walked-5km": "Range walker",
+      "five-discoveries": "Cartographer's eye",
+      "mapped-25-sectors": "Land reader",
+      "horizon-witness": "Horizon witness",
+      "first-relic": "First relic"
+    };
+
+    return labels[id] || id;
+  },
+
+  unlockAbility(id) {
+    this.ensureState();
+
+    if (!STATE.progression.unlocks.includes(id)) {
+      STATE.progression.unlocks.push(id);
+      UISystem.showToast(`Unlocked: ${id}`);
+    }
+  },
+
+  unlockCosmetic(id) {
+    this.unlockAbility(`cosmetic:${id}`);
+  },
+
+  calculatePlayerRank() {
+    this.ensureState();
+
+    const points =
+      STATE.progression.milestones.length * 10 +
+      STATE.progression.unlocks.length * 5;
+
+    if (points >= 100) return "Pathfinder";
+    if (points >= 50) return "Wayfarer";
+    if (points >= 20) return "Walker";
+
+    return "Nomad";
+  }
+};
+
+/* =========================================================
+   22. JOURNEY / QUEST SYSTEM
+========================================================= */
+
+const JourneySystem = {
+  update() {
+    if (!STATE.journey) {
+      STATE.journey = {
+        current: "reach-first-light",
+        step: 0,
+        completed: []
+      };
+    }
+
+    const nearby = STATE.landmarks.nearby;
+
+    if (
+      STATE.journey.current === "reach-first-light" &&
+      nearby &&
+      nearby.type === "beacon"
+    ) {
+      STATE.journey.step = 1;
+    }
+
+    if (
+      STATE.journey.current === "reach-first-light" &&
+      (STATE.discovery.log || []).some(entry => entry.type === "beacon")
+    ) {
+      this.completeStep("reach-first-light");
+    }
+  },
+
+  createJourney(id) {
+    STATE.journey = {
+      current: id,
+      step: 0,
+      completed: STATE.journey?.completed || []
+    };
+  },
+
+  completeStep(id) {
+    if (!STATE.journey.completed.includes(id)) {
+      STATE.journey.completed.push(id);
+      UISystem.showToast("Journey updated");
+      ProgressionSystem.grantMilestone(id);
+    }
+  },
+
+  getObjectiveText() {
+    if (!STATE.journey) return "Follow the old lights";
+
+    if (STATE.journey.completed.includes("reach-first-light")) {
+      return "Cross the range and map what remains";
+    }
+
+    if (STATE.journey.step === 1) {
+      return "Mark the beacon with E";
+    }
+
+    return "Find the first old light";
+  },
+
+  renderJourneyHUD() {}
+};
+
+/* =========================================================
+   23. AUDIO SYSTEM
+========================================================= */
+
+const AudioSystem = {
+  enabled: false,
+  ctx: null,
+
+  init() {
+    if (this.ctx) return;
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    this.ctx = new AudioContext();
+    this.enabled = true;
+  },
+
+  playTone(freq = 220, duration = 0.12, gain = 0.04) {
+    if (!this.ctx || !this.enabled) return;
+
+    const osc = this.ctx.createOscillator();
+    const amp = this.ctx.createGain();
+
+    osc.frequency.value = freq;
+    amp.gain.value = gain;
+
+    osc.connect(amp);
+    amp.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  },
+
+  updateAmbience() {},
+
+  setWeatherLayer() {},
+
+  setBiomeLayer() {}
+};
+
+/* =========================================================
+   24. UI / HUD SYSTEM
+========================================================= */
+
+const UISystem = {
+  update(dt) {
+    if (STATE.ui.toastTimer > 0) {
+      STATE.ui.toastTimer -= dt;
+    }
+
+    STATE.ui.objective = JourneySystem.getObjectiveText();
+    STATE.ui.region = WorldSystem.getRegionName();
+    STATE.ui.rank = ProgressionSystem.calculatePlayerRank();
+    STATE.ui.weather = STATE.weather.current || "clear";
+    STATE.ui.distanceKm = Number((STATE.world.distanceTravelled / 1000).toFixed(1));
+    STATE.ui.terrain = STATE.player.currentTerrainLabel || "Open Ground";
+    STATE.ui.speed = Math.round(Math.hypot(STATE.player.vx, STATE.player.vy));
+  },
+
+  showToast(text, seconds = 3.2) {
+    STATE.ui.toast = text;
+    STATE.ui.toastTimer = seconds;
+
+    if (AudioSystem.enabled) {
+      AudioSystem.playTone(260, 0.08, 0.025);
+    }
+  },
+
+  hideToast() {
+    STATE.ui.toast = "";
+    STATE.ui.toastTimer = 0;
+  },
+
+  renderHUD() {},
+  renderOverlay() {}
+};
+
+/* =========================================================
+   25. DEBUG / DEVTOOLS SYSTEM
+========================================================= */
+
+const DebugSystem = {
+  enabled: false,
+  logs: [],
+  toggle() {},
+  log() {},
+  render() {},
+  runDiagnostics() {}
+};
+
+/* =========================================================
+   26. RENDER PIPELINE
+========================================================= */
+
+const RenderPipeline = {
+  clear() {},
+  renderSky() {},
+  renderBackground() {},
+  renderWorld() {},
+  renderEntities() {},
+  renderForeground() {},
+  renderUI() {},
+  render() {}
+};
+
+/* =========================================================
+   27. UPDATE PIPELINE
 ========================================================= */
 
 function update(dt) {
-  if (!state.started || state.paused) return;
-
-  updateTime(dt);
-updateWeather(dt);
-updatePlayer(dt);
-  updateCamera(dt);
-  updateDiscovery(dt);
-updateTraversal(dt);
-updateExplorationMemory();
-updateHUD();
-updateMovementHUD();
-updateWeatherHUD();
+  InputSystem.update(dt);
+  TimeSystem.update(dt);
+  WeatherSystem.update(dt);
+  WorldSystem.update(dt);
+  ChunkSystem.update(dt);
+  PlayerSystem.update(dt);
+  TraversalSystem.update(dt);
+  PuzzleSystem.update(dt);
+  LandmarkSystem.update(dt);
+  DiscoverySystem.update(dt);
+  MapSystem.update(dt);
+  HorizonEventSystem.update(dt);
+  RelicSystem.update(dt);
+  ProgressionSystem.update(dt);
+  JourneySystem.update(dt);
+  AudioSystem.updateAmbience(dt);
+  UISystem.update(dt);
 }
 
-function updateWeather(dt) {
-  state.weather.timer += dt;
-
-  if (state.weather.timer > 40) {
-    state.weather.timer = 0;
-    state.weather.current = chooseNextWeather();
-  }
-
-  state.weather.blend = lerp(
-    state.weather.blend,
-    1,
-    CONFIG.weather.transitionSpeed
-  );
-
-  if (!state.weather.strangeLight && Math.random() < CONFIG.weather.strangeLightChance) {
-    state.weather.strangeLight = true;
-    state.weather.strangeLightTimer = 18;
-  }
-
-  if (state.weather.strangeLight) {
-    state.weather.strangeLightTimer -= dt;
-
-    if (state.weather.strangeLightTimer <= 0) {
-      state.weather.strangeLight = false;
-    }
-  }
-}
-
-function render() {
-  clearSky();
-drawWeatherTint();
-drawSunMoon();
-drawDistantMountains();
-drawStrangeLights();
-  drawTerrain();
-  drawLandmarks();
-drawTraversalRings();
-drawMovementTrail();
-drawPlayer();
-drawAtmosphere();
-drawParticles(0.016);
-drawDiscoveryNotification();
-drawDiscoveryLog();
-drawWorldMap();
-drawTraversalMessage();
-}
+/* =========================================================
+   28. MAIN LOOP
+========================================================= */
 
 function loop(now) {
-  const rawDt = (now - state.lastTime) / 1000;
-  const dt = Math.min(0.033, rawDt);
-  state.lastTime = now;
+  App.dt = Math.min(0.033, (now - App.lastTime) / 1000);
+  App.lastTime = now;
+  App.frame++;
 
-  update(dt);
-  render();
+  if (App.running && !App.paused) {
+    update(App.dt);
+  }
 
+  RenderPipeline.render(App.dt);
   requestAnimationFrame(loop);
 }
 
-initParticles();
+/* =========================================================
+   29. INITIALISATION
+========================================================= */
 
-requestAnimationFrame(loop);
+function init() {
+  bootGame();
+  InputSystem.bind();
+  SaveSystem.load();
+  App.running = true;
+  requestAnimationFrame(loop);
+}
 
-setInterval(() => {
-  if (state.started) saveGame();
-}, 5000);
+init();
 </script>
 </body>
 </html>
